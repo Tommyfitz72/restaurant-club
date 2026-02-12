@@ -210,3 +210,4 @@ npm run dev:frontend
 
 Current implementation stores onboarding/rating state in localStorage with backend profile persistence via session id.
 To add full user accounts, extend schema with `User` and auth (e.g., Clerk/Auth0/NextAuth) and link `UserProfile` to user id.
+# restaurant-club
