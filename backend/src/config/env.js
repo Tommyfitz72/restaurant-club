@@ -7,10 +7,22 @@ const toBool = (value, fallback = false) => {
   return String(value).toLowerCase() === 'true';
 };
 
+const parseCsv = (value, fallback = []) => {
+  if (!value) return fallback;
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const singleFrontend = process.env.FRONTEND_URL || 'http://localhost:5173';
+const frontendOrigins = parseCsv(process.env.FRONTEND_URLS, [singleFrontend]);
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 4000),
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  frontendUrl: singleFrontend,
+  frontendOrigins,
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL,
   useMockProviders: toBool(process.env.USE_MOCK_PROVIDERS, true),

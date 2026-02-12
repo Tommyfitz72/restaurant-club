@@ -8,10 +8,32 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 export const app = express();
 
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  if (env.frontendOrigins.includes(origin)) {
+    return true;
+  }
+
+  // Allow Vercel deployment URLs to prevent breakage between preview/prod URLs.
+  if (origin.endsWith('.vercel.app')) {
+    return true;
+  }
+
+  return false;
+};
+
 app.use(
   cors({
-    origin: env.frontendUrl,
-    credentials: true
+    origin(origin, callback) {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
 app.use(helmet());
