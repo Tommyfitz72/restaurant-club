@@ -1,213 +1,90 @@
-# Boston/Cambridge Reservation Finder
+# The Restaurant Club
 
-Full-stack application for discovering reservation availability in **Boston, MA** and **Cambridge, MA**, personalized by user cuisine preferences, ratings, price range, dining time, and party size.
+"We're bringing back spontaneous dining"
 
-## Features
+Full-stack app that finds reservation openings in **Boston** and **Cambridge** for the upcoming two nights, then ranks them to each user with:
 
-- Reservation scanner service that runs every 15-30 minutes (configurable) and collects OpenTable/Resy availability.
-- API adapter pattern for OpenTable/Resy with mock provider fallback for local development.
-- Rate limiting and provider error isolation during scans.
-- Preference onboarding:
-  - Cuisine multi-select
-  - Optional price range
-  - Optional preferred dining windows
-  - Optional default party size
-- Restaurant rating flow over 20 local restaurants.
-- Recommendation engine with weighted scoring:
-  - Cuisine preferences (highest weight)
-  - Direct rating of restaurant
-  - Ratings of similar cuisine restaurants
-  - Price and time fit
-- Match percentage and recommendation explanation.
-- Filters after recommendations: date, time range, party size, neighborhood.
-- Manual refresh button for newly opened tables.
-- Responsive UI for mobile/tablet/desktop.
-- Friendly empty-state/error messaging when no reservation matches are found.
+- Cuisine preferences
+- User restaurant ratings
+- Cross-platform review signals (Resy, OpenTable, Google, and other sources)
+- Price/time fit
+- Newly opened slots detected in the 48h to 1h window (possible cancellations)
 
-## Tech Stack
+## Main flow
+
+1. User sets cuisine + dining preferences.
+2. User rates the top 50 Boston/Cambridge restaurants.
+3. Scanner refreshes reservation slots from provider adapters.
+4. Recommendations are ranked and explained with match reasons.
+5. UI highlights potential cancellation openings.
+
+## Stack
 
 - Frontend: React + Vite
 - Backend: Node.js + Express
-- DB: PostgreSQL via Prisma
-- Cache: Redis (optional, with in-memory fallback)
-- Scheduler: node-cron
+- Database: PostgreSQL + Prisma
+- Cache: Redis optional (memory fallback)
+- Scheduler: node-cron (default every 20 minutes)
 
-## Project Structure
-
-```text
-.
-├── package.json
-├── .gitignore
-├── README.md
-├── backend
-│   ├── .env.example
-│   ├── package.json
-│   ├── prisma
-│   │   └── schema.prisma
-│   └── src
-│       ├── app.js
-│       ├── server.js
-│       ├── config
-│       │   ├── constants.js
-│       │   └── env.js
-│       ├── controllers
-│       │   ├── profileController.js
-│       │   ├── recommendationController.js
-│       │   ├── reservationController.js
-│       │   └── restaurantController.js
-│       ├── data
-│       │   ├── popularRestaurants.js
-│       │   └── seed.js
-│       ├── jobs
-│       │   └── scannerJob.js
-│       ├── middleware
-│       │   └── errorHandler.js
-│       ├── routes
-│       │   └── index.js
-│       ├── services
-│       │   ├── cache.js
-│       │   ├── db.js
-│       │   ├── recommendationService.js
-│       │   ├── scannerService.js
-│       │   └── providers
-│       │       ├── baseProvider.js
-│       │       ├── mockProvider.js
-│       │       ├── openTableProvider.js
-│       │       └── resyProvider.js
-│       └── utils
-│           └── time.js
-└── frontend
-    ├── .env.example
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    └── src
-        ├── App.jsx
-        ├── main.jsx
-        ├── api
-        │   └── client.js
-        ├── components
-        │   ├── PreferencesForm.jsx
-        │   ├── RecommendationsView.jsx
-        │   ├── RestaurantRater.jsx
-        │   └── StarRating.jsx
-        ├── hooks
-        │   └── useLocalStorage.js
-        ├── styles
-        │   └── global.css
-        └── utils
-            └── session.js
-```
-
-## Environment Variables
-
-### Backend (`backend/.env`)
-
-Copy from `backend/.env.example`:
-
-```bash
-cp backend/.env.example backend/.env
-```
-
-Variables:
-
-- `NODE_ENV=development`
-- `PORT=4000`
-- `FRONTEND_URL=http://localhost:5173`
-- `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/reservation_finder?schema=public`
-- `REDIS_URL=redis://localhost:6379`
-- `USE_MOCK_PROVIDERS=true`
-- `SCAN_INTERVAL_MINUTES=20`
-- `MAX_PROVIDER_CONCURRENCY=2`
-- `OPENTABLE_API_BASE=https://www.opentable.com`
-- `OPENTABLE_API_KEY=`
-- `RESY_API_BASE=https://api.resy.com`
-- `RESY_API_KEY=`
-
-### Frontend (`frontend/.env`)
-
-Copy from `frontend/.env.example`:
-
-```bash
-cp frontend/.env.example frontend/.env
-```
-
-Variables:
-
-- `VITE_API_BASE=http://localhost:4000/api`
-
-## Local Setup
-
-1. Install dependencies:
+## Setup
 
 ```bash
 npm install --prefix backend
 npm install --prefix frontend
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-2. Start PostgreSQL (and Redis optionally).
+Update `backend/.env` with your real `DATABASE_URL`.
 
-3. Generate Prisma client and apply migrations:
+### Prisma (required after provider enum changes)
 
 ```bash
-npm --prefix backend run prisma:generate
-npm --prefix backend run prisma:migrate
+cd backend
+npm run prisma:generate
+npm run prisma:migrate -- --name provider_expansion_and_restaurant_club
+npm run seed
 ```
 
-4. Seed Boston/Cambridge restaurants:
+## Run locally
 
-```bash
-npm --prefix backend run seed
-```
-
-5. Run backend and frontend in separate terminals:
+Terminal 1:
 
 ```bash
 npm run dev:backend
+```
+
+Terminal 2:
+
+```bash
 npm run dev:frontend
 ```
 
-6. Open `http://localhost:5173`.
+Open: [http://localhost:5173](http://localhost:5173)
 
-## API Endpoints
+## Env vars
 
-- `GET /api/health`
-- `GET /api/restaurants/popular`
-- `GET /api/restaurants/neighborhoods`
-- `PUT /api/profiles/:sessionId`
-- `GET /api/profiles/:sessionId`
-- `PUT /api/profiles/:sessionId/ratings`
-- `GET /api/recommendations`
-- `GET /api/reservations/available`
-- `POST /api/reservations/refresh` (rate-limited)
+Backend (`backend/.env`):
 
-## Deployment Guide
+- `NODE_ENV`
+- `PORT`
+- `FRONTEND_URL`
+- `DATABASE_URL`
+- `REDIS_URL` (optional)
+- `USE_MOCK_PROVIDERS`
+- `SCAN_INTERVAL_MINUTES`
+- `MAX_PROVIDER_CONCURRENCY`
+- `OPENTABLE_API_BASE`
+- `OPENTABLE_API_KEY`
+- `RESY_API_BASE`
+- `RESY_API_KEY`
+- `GOOGLE_PLACES_API_BASE`
+- `GOOGLE_PLACES_API_KEY`
 
-### Frontend (Vercel or Netlify)
+Frontend (`frontend/.env`):
 
-- Root directory: `frontend`
-- Build command: `npm run build`
-- Output directory: `dist`
-- Environment variable: `VITE_API_BASE=https://<your-backend-domain>/api`
+- `VITE_API_BASE`
 
-### Backend (Render or Railway)
+## Important legal note
 
-- Root directory: `backend`
-- Build command: `npm install && npm run prisma:generate && npm run prisma:deploy`
-- Start command: `npm run start`
-- Provision PostgreSQL and set `DATABASE_URL`
-- Optional Redis service and set `REDIS_URL`
-- Set `USE_MOCK_PROVIDERS=false` when real provider integration is enabled
-
-## Legal and Ethical Notes
-
-- Respect OpenTable/Resy terms and API licensing before using production scraping or undocumented endpoints.
-- Add provider-specific request throttling and retry backoff to avoid abuse.
-- Follow `robots.txt` and local laws for any scraping implementation.
-- Display availability disclaimer: reservation inventory can change rapidly and booking is finalized only on provider sites.
-
-## Optional Account Extension
-
-Current implementation stores onboarding/rating state in localStorage with backend profile persistence via session id.
-To add full user accounts, extend schema with `User` and auth (e.g., Clerk/Auth0/NextAuth) and link `UserProfile` to user id.
-# restaurant-club
+Production scraping/API integrations must follow each provider's terms of service, rate limits, and robots policies. Availability can change rapidly and booking is finalized on provider sites.

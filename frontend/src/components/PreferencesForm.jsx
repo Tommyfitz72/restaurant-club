@@ -10,7 +10,9 @@ const CUISINES = [
   'Steakhouse',
   'Seafood',
   'Indian',
-  'Korean'
+  'Korean',
+  'Spanish',
+  'Middle Eastern'
 ];
 
 const TIME_OPTIONS = [
@@ -38,12 +40,18 @@ export default function PreferencesForm({ value, onChange, onSubmit }) {
   };
 
   return (
-    <div className="panel">
-      <h1>Boston Table Scout</h1>
-      <p className="lead">Find reservation openings in Boston and Cambridge tailored to your dining tastes.</p>
+    <main className="page-shell">
+      <section className="hero-shell">
+        <p className="hero-kicker">Boston + Cambridge</p>
+        <h1>The Restaurant Club</h1>
+        <p className="hero-slogan">We&apos;re bringing back spontaneous dining</p>
+      </section>
 
-      <section>
-        <h2>What types of cuisine do you enjoy?</h2>
+      <section className="beli-card">
+        <h2>Your dining profile</h2>
+        <p className="lead">Pick cuisine and timing preferences so we can tune reservation matches for the next two nights.</p>
+
+        <div className="section-label">What types of cuisine do you enjoy?</div>
         <div className="chip-grid">
           {CUISINES.map((cuisine) => (
             <button
@@ -56,49 +64,47 @@ export default function PreferencesForm({ value, onChange, onSubmit }) {
             </button>
           ))}
         </div>
-      </section>
 
-      <section className="input-row">
-        <label>
-          Price min
-          <select
-            value={value.priceMin}
-            onChange={(event) => onChange({ ...value, priceMin: Number(event.target.value) })}
-          >
-            <option value={1}>$</option>
-            <option value={2}>$$</option>
-            <option value={3}>$$$</option>
-            <option value={4}>$$$$</option>
-          </select>
-        </label>
+        <div className="input-row">
+          <label>
+            Price min
+            <select
+              value={value.priceMin}
+              onChange={(event) => onChange({ ...value, priceMin: Number(event.target.value) })}
+            >
+              <option value={1}>$</option>
+              <option value={2}>$$</option>
+              <option value={3}>$$$</option>
+              <option value={4}>$$$$</option>
+            </select>
+          </label>
 
-        <label>
-          Price max
-          <select
-            value={value.priceMax}
-            onChange={(event) => onChange({ ...value, priceMax: Number(event.target.value) })}
-          >
-            <option value={1}>$</option>
-            <option value={2}>$$</option>
-            <option value={3}>$$$</option>
-            <option value={4}>$$$$</option>
-          </select>
-        </label>
+          <label>
+            Price max
+            <select
+              value={value.priceMax}
+              onChange={(event) => onChange({ ...value, priceMax: Number(event.target.value) })}
+            >
+              <option value={1}>$</option>
+              <option value={2}>$$</option>
+              <option value={3}>$$$</option>
+              <option value={4}>$$$$</option>
+            </select>
+          </label>
 
-        <label>
-          Party size
-          <input
-            type="number"
-            min="1"
-            max="20"
-            value={value.defaultPartySize}
-            onChange={(event) => onChange({ ...value, defaultPartySize: Number(event.target.value) })}
-          />
-        </label>
-      </section>
+          <label>
+            Party size
+            <input
+              type="number"
+              min="1"
+              max="20"
+              value={value.defaultPartySize}
+              onChange={(event) => onChange({ ...value, defaultPartySize: Number(event.target.value) })}
+            />
+          </label>
+        </div>
 
-      <section>
-        <h2>Preferred dining times</h2>
+        <div className="section-label">Preferred dining windows</div>
         <div className="chip-grid">
           {TIME_OPTIONS.map((option) => {
             const key = `${option.value.startHour}-${option.value.endHour}`;
@@ -117,16 +123,16 @@ export default function PreferencesForm({ value, onChange, onSubmit }) {
             );
           })}
         </div>
-      </section>
 
-      <button
-        type="button"
-        className="primary-btn"
-        disabled={!value.cuisinePreferences.length}
-        onClick={onSubmit}
-      >
-        Continue to Restaurant Ratings
-      </button>
-    </div>
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={!value.cuisinePreferences.length}
+          onClick={onSubmit}
+        >
+          Continue to Top 50 Ratings
+        </button>
+      </section>
+    </main>
   );
 }

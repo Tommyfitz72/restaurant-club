@@ -13,12 +13,14 @@ export const listRecommendations = async (req, res, next) => {
 
     if (!recommendations.length) {
       return res.status(404).json({
-        message: 'No reservations match your preferences right now. Try adjusting filters or refresh later.'
+        message:
+          'No reservations match your preferences in the next two nights. Try adjusting filters or tap refresh for new openings.'
       });
     }
 
     return res.json({
-      disclaimer: 'Reservation availability is subject to change on provider platforms.',
+      disclaimer:
+        'Reservation availability is pulled from partner sources and may change quickly. Booking is finalized on the source platform.',
       recommendations
     });
   } catch (error) {

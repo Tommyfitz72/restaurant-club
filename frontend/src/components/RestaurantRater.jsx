@@ -2,31 +2,44 @@ import StarRating from './StarRating.jsx';
 
 export default function RestaurantRater({ restaurants, ratings, onRate, onSkip, onSubmit }) {
   return (
-    <div className="panel">
-      <h1>Rate Restaurants You Know</h1>
-      <p className="lead">Rate up to 20 places (or skip) so recommendations can learn your style.</p>
+    <main className="page-shell">
+      <section className="beli-card">
+        <div className="title-group">
+          <h1>Rate the Boston 50</h1>
+          <p className="lead">
+            Quick-rate any restaurants you know. We use your ratings plus review signals from Resy, OpenTable, Google,
+            and other sources.
+          </p>
+        </div>
 
-      <div className="restaurant-grid">
-        {restaurants.map((restaurant) => (
-          <article className="restaurant-card" key={restaurant.id}>
-            <img src={restaurant.imageUrl} alt={restaurant.name} loading="lazy" />
-            <div className="restaurant-content">
-              <h3>{restaurant.name}</h3>
-              <p>
-                {restaurant.cuisineType} • {restaurant.neighborhood}
-              </p>
-              <StarRating value={ratings[restaurant.id] || 0} onChange={(value) => onRate(restaurant.id, value)} />
-              <button type="button" className="link-btn" onClick={() => onSkip(restaurant.id)}>
-                Skip
-              </button>
-            </div>
-          </article>
-        ))}
-      </div>
+        <div className="restaurant-grid">
+          {restaurants.map((restaurant) => (
+            <article className="restaurant-card" key={restaurant.id}>
+              <img src={restaurant.imageUrl} alt={restaurant.name} loading="lazy" />
+              <div className="restaurant-content">
+                <h3>{restaurant.name}</h3>
+                <p>
+                  {restaurant.cuisineType} • {restaurant.neighborhood} • {'$'.repeat(restaurant.priceRange)}
+                </p>
+                {restaurant.reviewSignals ? (
+                  <p className="meta-line">
+                    Resy {restaurant.reviewSignals.sources.resy} • OpenTable {restaurant.reviewSignals.sources.opentable}
+                    {' • '}Google {restaurant.reviewSignals.sources.google}
+                  </p>
+                ) : null}
+                <StarRating value={ratings[restaurant.id] || 0} onChange={(value) => onRate(restaurant.id, value)} />
+                <button type="button" className="link-btn" onClick={() => onSkip(restaurant.id)}>
+                  Skip
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
 
-      <button type="button" className="primary-btn" onClick={onSubmit}>
-        Show Reservation Recommendations
-      </button>
-    </div>
+        <button type="button" className="primary-btn" onClick={onSubmit}>
+          Show Reservations for the Next Two Nights
+        </button>
+      </section>
+    </main>
   );
 }

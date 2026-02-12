@@ -29,6 +29,7 @@ export const api = {
     const qs = new URLSearchParams(params);
     return parseJson(await fetch(`${API_BASE}/recommendations?${qs.toString()}`));
   },
+  getRecentOpenings: async () => parseJson(await fetch(`${API_BASE}/reservations/openings`)),
   refreshReservations: async () =>
     parseJson(
       await fetch(`${API_BASE}/reservations/refresh`, {

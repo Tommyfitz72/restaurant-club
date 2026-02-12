@@ -16,13 +16,14 @@ const initialProfile = {
 
 export default function App() {
   const sessionId = useMemo(() => getSessionId(), []);
-  const [step, setStep] = useLocalStorage('tableScoutStep', 'preferences');
-  const [profile, setProfile] = useLocalStorage('tableScoutProfile', initialProfile);
-  const [ratings, setRatings] = useLocalStorage('tableScoutRatings', {});
+  const [step, setStep] = useLocalStorage('restaurantClubStep', 'preferences');
+  const [profile, setProfile] = useLocalStorage('restaurantClubProfile', initialProfile);
+  const [ratings, setRatings] = useLocalStorage('restaurantClubRatings', {});
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [openings, setOpenings] = useState([]);
   const [error, setError] = useState('');
 
   const [filters, setFilters] = useState({
@@ -38,9 +39,14 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [popular, hoods] = await Promise.all([api.getPopularRestaurants(), api.getNeighborhoods()]);
+        const [popular, hoods, recentOpenings] = await Promise.all([
+          api.getPopularRestaurants(),
+          api.getNeighborhoods(),
+          api.getRecentOpenings()
+        ]);
         setRestaurants(popular);
         setNeighborhoods(hoods);
+        setOpenings(recentOpenings);
       } catch (loadError) {
         setError(loadError.message);
       }
@@ -51,11 +57,15 @@ export default function App() {
   const loadRecommendations = async (nextFilters = filters) => {
     try {
       setError('');
-      const result = await api.getRecommendations({
-        sessionId,
-        ...nextFilters
-      });
+      const [result, recentOpenings] = await Promise.all([
+        api.getRecommendations({
+          sessionId,
+          ...nextFilters
+        }),
+        api.getRecentOpenings()
+      ]);
       setRecommendations(result.recommendations || []);
+      setOpenings(recentOpenings || []);
     } catch (fetchError) {
       setRecommendations([]);
       setError(fetchError.message);
@@ -123,6 +133,7 @@ export default function App() {
   return (
     <RecommendationsView
       data={recommendations}
+      openings={openings}
       filters={filters}
       neighborhoods={neighborhoods}
       onFiltersChange={setFilters}

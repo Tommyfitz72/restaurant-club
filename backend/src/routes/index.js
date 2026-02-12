@@ -3,6 +3,7 @@ import { getNeighborhoods, getPopularRestaurants } from '../controllers/restaura
 import { getProfile, saveRatings, upsertProfile } from '../controllers/profileController.js';
 import {
   getAvailableReservations,
+  listRecentOpenings,
   refreshLimiter,
   refreshReservations
 } from '../controllers/reservationController.js';
@@ -23,5 +24,6 @@ router.put('/profiles/:sessionId/ratings', saveRatings);
 
 router.post('/reservations/refresh', refreshLimiter, refreshReservations);
 router.get('/reservations/available', getAvailableReservations);
+router.get('/reservations/openings', listRecentOpenings);
 
 router.get('/recommendations', listRecommendations);

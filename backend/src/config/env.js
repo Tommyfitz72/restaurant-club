@@ -19,7 +19,9 @@ export const env = {
   openTableApiBase: process.env.OPENTABLE_API_BASE || 'https://www.opentable.com',
   openTableApiKey: process.env.OPENTABLE_API_KEY || '',
   resyApiBase: process.env.RESY_API_BASE || 'https://api.resy.com',
-  resyApiKey: process.env.RESY_API_KEY || ''
+  resyApiKey: process.env.RESY_API_KEY || '',
+  googlePlacesApiBase: process.env.GOOGLE_PLACES_API_BASE || 'https://maps.googleapis.com/maps/api/place',
+  googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY || ''
 };
 
 if (!env.databaseUrl) {

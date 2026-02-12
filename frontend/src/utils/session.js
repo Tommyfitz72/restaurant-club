@@ -1,4 +1,4 @@
-const KEY = 'tableScoutSessionId';
+const KEY = 'restaurantClubSessionId';
 
 export const getSessionId = () => {
   const existing = localStorage.getItem(KEY);

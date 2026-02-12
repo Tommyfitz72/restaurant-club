@@ -10,6 +10,8 @@ datasource db {
 enum ReservationProvider {
   OPENTABLE
   RESY
+  GOOGLE
+  DIRECT
 }
 
 model Restaurant {
@@ -49,16 +51,16 @@ model ReservationSlot {
 }
 
 model UserProfile {
-  id                String             @id @default(cuid())
-  sessionId         String             @unique
+  id                 String             @id @default(cuid())
+  sessionId          String             @unique
   cuisinePreferences String[]
-  preferredTimes    Json?
-  defaultPartySize  Int?
-  priceMin          Int?
-  priceMax          Int?
-  ratings           RestaurantRating[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  preferredTimes     Json?
+  defaultPartySize   Int?
+  priceMin           Int?
+  priceMax           Int?
+  ratings            RestaurantRating[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 }
 
 model RestaurantRating {

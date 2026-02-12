@@ -5,10 +5,24 @@ const memoryStore = new Map();
 
 let redis = null;
 if (env.redisUrl) {
-  redis = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1 });
-  redis.connect().catch(() => {
-    redis = null;
+  const client = new Redis(env.redisUrl, {
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    retryStrategy: () => null
   });
+
+  client.on('error', (error) => {
+    console.warn('[cache] Redis unavailable, falling back to memory cache:', error.message);
+  });
+
+  client
+    .connect()
+    .then(() => {
+      redis = client;
+    })
+    .catch(() => {
+      redis = null;
+    });
 }
 
 export const cache = {

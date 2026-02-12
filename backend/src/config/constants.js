@@ -12,14 +12,19 @@ export const CUISINE_OPTIONS = [
   'Steakhouse',
   'Seafood',
   'Indian',
-  'Korean'
+  'Korean',
+  'Spanish',
+  'Middle Eastern'
 ];
 
-export const DEFAULT_RESTAURANT_COUNT = 20;
+export const RATABLE_RESTAURANT_COUNT = 50;
+export const RESERVATION_LOOKAHEAD_HOURS = 48;
+export const CANCELLATION_MIN_LEAD_HOURS = 1;
 
 export const SCORE_WEIGHTS = {
-  cuisine: 0.5,
-  directRating: 0.25,
-  similarCuisine: 0.15,
-  priceAndTime: 0.1
+  cuisine: 0.42,
+  directRating: 0.2,
+  similarCuisine: 0.13,
+  priceAndTime: 0.1,
+  externalReview: 0.15
 };

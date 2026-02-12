@@ -1,6 +1,8 @@
-import { SCORE_WEIGHTS } from '../config/constants.js';
+import { RESERVATION_LOOKAHEAD_HOURS, SCORE_WEIGHTS } from '../config/constants.js';
 import { prisma } from './db.js';
 import { isWithinPreferredTime, sameDay } from '../utils/time.js';
+import { getReviewSignalsForRestaurants } from './reviewSignalsService.js';
+import { getRecentOpenings } from './scannerService.js';
 
 const normalizeRating = (rating) => (rating ? rating / 5 : 0.5);
 
@@ -13,12 +15,23 @@ const withinPrice = (restaurant, profile) => {
   return restaurant.priceRange >= min && restaurant.priceRange <= max ? 1 : 0.4;
 };
 
-const explanation = ({ cuisineScore, directRatingScore, similarCuisineScore, priceTimeScore }) => {
+const normalizeExternalScore = (aggregate) => clamp((aggregate - 3) / 2, 0, 1);
+
+const explanation = ({
+  cuisineScore,
+  directRatingScore,
+  similarCuisineScore,
+  priceTimeScore,
+  externalReviewScore,
+  hasRecentOpening
+}) => {
   const reasons = [];
   if (cuisineScore > 0.8) reasons.push('Matches your cuisine preferences');
   if (directRatingScore > 0.8) reasons.push('You rated this restaurant highly');
   if (similarCuisineScore > 0.7) reasons.push('You liked similar restaurants in this cuisine');
   if (priceTimeScore > 0.8) reasons.push('Fits your price and time preferences');
+  if (externalReviewScore > 0.7) reasons.push('Strong reviews across Resy, OpenTable, Google, and other sources');
+  if (hasRecentOpening) reasons.push('A newly opened slot was recently detected');
   return reasons.length ? reasons : ['Popular option in Boston/Cambridge'];
 };
 
@@ -45,7 +58,10 @@ export const getRecommendations = async ({
 
   const reservationWhere = {
     available: true,
-    startsAt: { gte: new Date() },
+    startsAt: {
+      gte: new Date(),
+      lte: new Date(Date.now() + RESERVATION_LOOKAHEAD_HOURS * 60 * 60 * 1000)
+    },
     ...(partySize ? { partySize: Number(partySize) } : {})
   };
 
@@ -53,8 +69,13 @@ export const getRecommendations = async ({
     where: reservationWhere,
     include: { restaurant: true },
     orderBy: { startsAt: 'asc' },
-    take: 600
+    take: 1200
   });
+
+  const restaurants = Array.from(new Map(reservations.map((entry) => [entry.restaurant.id, entry.restaurant])).values());
+  const reviewSignalsByRestaurant = await getReviewSignalsForRestaurants(restaurants);
+  const recentOpenings = await getRecentOpenings();
+  const openingRestaurantIds = new Set(recentOpenings.map((item) => item.restaurantId));
 
   const filtered = reservations.filter((reservation) => {
     if (date && !sameDay(reservation.startsAt, date)) return false;
@@ -98,18 +119,32 @@ export const getRecommendations = async ({
     const priceFit = withinPrice(reservation.restaurant, profile || {});
     const priceTimeScore = (timeFit + priceFit) / 2;
 
+    const reviewSignals = reviewSignalsByRestaurant.get(reservation.restaurant.id);
+    const externalReviewScore = normalizeExternalScore(reviewSignals?.aggregate || 0);
+    const hasRecentOpening = openingRestaurantIds.has(reservation.restaurantId);
+
     const total =
       cuisineScore * SCORE_WEIGHTS.cuisine +
       directRatingScore * SCORE_WEIGHTS.directRating +
       similarCuisineScore * SCORE_WEIGHTS.similarCuisine +
-      priceTimeScore * SCORE_WEIGHTS.priceAndTime;
+      priceTimeScore * SCORE_WEIGHTS.priceAndTime +
+      externalReviewScore * SCORE_WEIGHTS.externalReview;
 
     const percent = Math.round(clamp(total * 100, 0, 100));
 
     return {
       ...reservation,
       matchScore: percent,
-      explanation: explanation({ cuisineScore, directRatingScore, similarCuisineScore, priceTimeScore })
+      reviewSignals,
+      hasRecentOpening,
+      explanation: explanation({
+        cuisineScore,
+        directRatingScore,
+        similarCuisineScore,
+        priceTimeScore,
+        externalReviewScore,
+        hasRecentOpening
+      })
     };
   });
 
@@ -121,12 +156,15 @@ export const getRecommendations = async ({
         restaurant: item.restaurant,
         matchScore: item.matchScore,
         explanation: item.explanation,
+        reviewSignals: item.reviewSignals,
+        hasRecentOpening: item.hasRecentOpening,
         slots: []
       });
     }
 
     const target = grouped.get(key);
     target.matchScore = Math.max(target.matchScore, item.matchScore);
+    target.hasRecentOpening = target.hasRecentOpening || item.hasRecentOpening;
     target.slots.push({
       id: item.id,
       startsAt: item.startsAt,
@@ -138,5 +176,5 @@ export const getRecommendations = async ({
 
   return Array.from(grouped.values())
     .sort((a, b) => b.matchScore - a.matchScore)
-    .slice(0, 50);
+    .slice(0, 100);
 };
