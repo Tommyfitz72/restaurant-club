@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReservationProvider {
+  OPENTABLE
+  RESY
+}
+
+model Restaurant {
+  id            String            @id @default(cuid())
+  name          String
+  cuisineType   String
+  city          String
+  neighborhood  String
+  address       String
+  priceRange    Int
+  imageUrl      String
+  bookingLinks  Json
+  ratings       RestaurantRating[]
+  reservations  ReservationSlot[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([name, city])
+}
+
+model ReservationSlot {
+  id             String              @id @default(cuid())
+  provider       ReservationProvider
+  externalSlotId String
+  restaurantId   String
+  startsAt       DateTime
+  partySize      Int
+  bookingUrl     String
+  available      Boolean             @default(true)
+  scannedAt      DateTime            @default(now())
+  restaurant     Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([startsAt])
+  @@index([partySize])
+  @@index([available])
+  @@unique([provider, externalSlotId, partySize])
+}
+
+model UserProfile {
+  id                String             @id @default(cuid())
+  sessionId         String             @unique
+  cuisinePreferences String[]
+  preferredTimes    Json?
+  defaultPartySize  Int?
+  priceMin          Int?
+  priceMax          Int?
+  ratings           RestaurantRating[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model RestaurantRating {
+  id           String      @id @default(cuid())
+  profileId    String
+  restaurantId String
+  rating       Int
+  profile      UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([profileId, restaurantId])
+  @@index([restaurantId])
+}

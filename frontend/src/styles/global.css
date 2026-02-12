@@ -1,0 +1,263 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Merriweather:wght@300;700&display=swap');
+
+:root {
+  --bg: radial-gradient(circle at 20% 10%, #ffd9a8 0, transparent 35%),
+    radial-gradient(circle at 80% 0%, #a6d6ff 0, transparent 40%),
+    #f6f2e9;
+  --text: #1c1f24;
+  --card: #fffdfa;
+  --accent: #e44a25;
+  --accent-dark: #bb2f0e;
+  --outline: #dfd7ca;
+  --muted: #66665f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Merriweather', serif;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+.panel {
+  width: min(1100px, 95vw);
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--outline);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 94%, #ffffff 6%);
+  backdrop-filter: blur(4px);
+}
+
+.lead {
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
+
+section {
+  margin-top: 1.5rem;
+}
+
+.chip-grid {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  border: 1px solid var(--outline);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.input-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+input,
+select {
+  border: 1px solid var(--outline);
+  padding: 0.55rem;
+  border-radius: 10px;
+  font: inherit;
+}
+
+.primary-btn,
+.secondary-btn,
+.link-btn {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary-btn {
+  margin-top: 1.5rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  font-weight: 600;
+}
+
+.primary-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #24292f;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+}
+
+.link-btn {
+  background: transparent;
+  color: var(--accent-dark);
+  text-decoration: underline;
+  padding: 0;
+}
+
+.restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.restaurant-card,
+.recommendation-card {
+  border: 1px solid var(--outline);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.restaurant-card img,
+.recommendation-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.restaurant-content,
+.recommendation-content {
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.stars {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.star {
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  color: #c8c8c8;
+}
+
+.star.active {
+  color: #ff8b17;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filters {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.7rem;
+}
+
+.recommendation-list {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.score-pill {
+  background: #eff7ec;
+  color: #1f6b2c;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.explanation {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.slot-link {
+  color: #0f4f76;
+  background: #e8f4fb;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  text-decoration: none;
+  font-size: 0.87rem;
+}
+
+.disclaimer {
+  margin-top: 0.8rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.error-box {
+  margin-top: 0.8rem;
+  background: #ffe6e2;
+  color: #8b2415;
+  border: 1px solid #f5b4a8;
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+
+@media (max-width: 700px) {
+  .panel {
+    margin: 0.8rem auto;
+    padding: 1rem;
+  }
+
+  .restaurant-card img,
+  .recommendation-card img {
+    height: 130px;
+  }
+}
