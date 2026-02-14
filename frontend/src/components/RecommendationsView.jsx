@@ -30,6 +30,16 @@ const TIME_PRESETS = {
   late: { startHour: 20, endHour: 22 }
 };
 
+const uniqueSlotsByTime = (slots = []) => {
+  const seen = new Set();
+  return slots.filter((slot) => {
+    const key = `${new Date(slot.startsAt).toISOString()}-${slot.partySize}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 export default function RecommendationsView({
   data,
   openings,
@@ -153,26 +163,38 @@ export default function RecommendationsView({
         ) : null}
 
         <div className="recommendation-list">
-          {data.map((entry) => (
-            <article className="result-card" key={entry.restaurant.id}>
-              <div className="result-head">
-                <strong>{entry.restaurant.name}</strong>
-                <span>{entry.matchScore}% match</span>
-              </div>
-              <p>
-                {entry.restaurant.cuisineType} • {entry.restaurant.neighborhood} • {'$'.repeat(entry.restaurant.priceRange)}
-              </p>
-              {entry.hasRecentOpening ? <p className="opening-tag">New opening detected</p> : null}
-              <p className="muted">Why: {entry.explanation.join(', ')}</p>
-              <div className="slot-list">
-                {entry.slots.slice(0, 8).map((slot) => (
-                  <a key={slot.id} href={slot.bookingUrl} target="_blank" rel="noreferrer" className="slot-link">
-                    {formatTime(slot.startsAt)} • party {slot.partySize} • {slot.provider}
-                  </a>
-                ))}
-              </div>
-            </article>
-          ))}
+          {data.map((entry) => {
+            const dedupedSlots = uniqueSlotsByTime(entry.slots).slice(0, 8);
+
+            return (
+              <article className="result-card" key={entry.restaurant.id}>
+                <div className="result-head">
+                  <strong>{entry.restaurant.name}</strong>
+                  <span>{entry.matchScore}% match</span>
+                </div>
+                <p>
+                  {entry.restaurant.cuisineType} • {entry.restaurant.neighborhood} • {'$'.repeat(entry.restaurant.priceRange)}
+                </p>
+
+                <img
+                  className="result-image"
+                  src={entry.restaurant.imageUrl}
+                  alt={entry.restaurant.name}
+                  loading="lazy"
+                />
+
+                {entry.hasRecentOpening ? <p className="opening-tag">New opening detected</p> : null}
+                <p className="muted">Why: {entry.explanation.join(', ')}</p>
+                <div className="slot-list">
+                  {dedupedSlots.map((slot) => (
+                    <a key={slot.id} href={slot.bookingUrl} target="_blank" rel="noreferrer" className="slot-link">
+                      {formatTime(slot.startsAt)} • party {slot.partySize} • {slot.provider}
+                    </a>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </main>
