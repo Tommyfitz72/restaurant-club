@@ -41,7 +41,8 @@ export const getRecommendations = async ({
   partySize,
   timeFrom,
   timeTo,
-  neighborhood
+  neighborhood,
+  restaurantQuery
 }) => {
   const profile = sessionId
     ? await prisma.userProfile.findUnique({
@@ -80,6 +81,11 @@ export const getRecommendations = async ({
   const filtered = reservations.filter((reservation) => {
     if (date && !sameDay(reservation.startsAt, date)) return false;
     if (neighborhood && reservation.restaurant.neighborhood !== neighborhood) return false;
+
+    if (restaurantQuery) {
+      const needle = String(restaurantQuery).toLowerCase();
+      if (!reservation.restaurant.name.toLowerCase().includes(needle)) return false;
+    }
 
     if (timeFrom || timeTo) {
       const hour = new Date(reservation.startsAt).getHours();

@@ -27,3 +27,25 @@ export const listRecommendations = async (req, res, next) => {
     next(error);
   }
 };
+
+export const searchRecommendations = async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (!q) {
+      return res.json([]);
+    }
+
+    const recommendations = await getRecommendations({
+      sessionId: req.query.sessionId,
+      partySize: req.query.partySize,
+      timeFrom: req.query.timeFrom,
+      timeTo: req.query.timeTo,
+      neighborhood: req.query.neighborhood,
+      restaurantQuery: q
+    });
+
+    return res.json(recommendations);
+  } catch (error) {
+    next(error);
+  }
+};

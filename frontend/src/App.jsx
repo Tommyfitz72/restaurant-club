@@ -3,6 +3,9 @@ import { api } from './api/client.js';
 import PreferencesForm from './components/PreferencesForm.jsx';
 import RestaurantRater from './components/RestaurantRater.jsx';
 import RecommendationsView from './components/RecommendationsView.jsx';
+import MyRatingsView from './components/MyRatingsView.jsx';
+import SearchView from './components/SearchView.jsx';
+import AboutView from './components/AboutView.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { getSessionId } from './utils/session.js';
 
@@ -16,15 +19,23 @@ const initialProfile = {
 
 export default function App() {
   const sessionId = useMemo(() => getSessionId(), []);
+
   const [step, setStep] = useLocalStorage('restaurantClubStep', 'preferences');
   const [profile, setProfile] = useLocalStorage('restaurantClubProfile', initialProfile);
   const [ratings, setRatings] = useLocalStorage('restaurantClubRatings', {});
+  const [externalRatings, setExternalRatings] = useLocalStorage('restaurantClubExternalRatings', []);
+  const [skipRatingsOnNext, setSkipRatingsOnNext] = useLocalStorage('restaurantClubSkipRatings', false);
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [openings, setOpenings] = useState([]);
   const [error, setError] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [ratingsSearchQuery, setRatingsSearchQuery] = useState('');
+  const [ratingsSearchResults, setRatingsSearchResults] = useState([]);
 
   const [filters, setFilters] = useState({
     date: '',
@@ -54,14 +65,22 @@ export default function App() {
     load();
   }, []);
 
+  const localRestaurantIds = useMemo(() => new Set(restaurants.map((item) => item.id)), [restaurants]);
+
+  const persistLocalRatings = async (nextRatings) => {
+    const payload = Object.entries(nextRatings)
+      .filter(([restaurantId, rating]) => localRestaurantIds.has(restaurantId) && Number(rating) > 0)
+      .map(([restaurantId, rating]) => ({ restaurantId, rating: Number(rating) }));
+
+    if (!payload.length) return;
+    await api.saveRatings(sessionId, payload);
+  };
+
   const loadRecommendations = async (nextFilters = filters) => {
     try {
       setError('');
       const [result, recentOpenings] = await Promise.all([
-        api.getRecommendations({
-          sessionId,
-          ...nextFilters
-        }),
+        api.getRecommendations({ sessionId, ...nextFilters }),
         api.getRecentOpenings()
       ]);
       setRecommendations(result.recommendations || []);
@@ -75,6 +94,11 @@ export default function App() {
   const submitPreferences = async () => {
     try {
       await api.saveProfile(sessionId, profile);
+      if (skipRatingsOnNext) {
+        setStep('results');
+        await loadRecommendations();
+        return;
+      }
       setStep('ratings');
     } catch (submitError) {
       setError(submitError.message);
@@ -83,11 +107,8 @@ export default function App() {
 
   const submitRatings = async () => {
     try {
-      const payload = Object.entries(ratings)
-        .filter(([, rating]) => Number(rating) > 0)
-        .map(([restaurantId, rating]) => ({ restaurantId, rating: Number(rating) }));
-
-      await api.saveRatings(sessionId, payload);
+      await persistLocalRatings(ratings);
+      setSkipRatingsOnNext(false);
       setStep('results');
       await loadRecommendations();
     } catch (submitError) {
@@ -107,6 +128,127 @@ export default function App() {
     }
   };
 
+  const applyUpdatedPreferences = async () => {
+    try {
+      await api.saveProfile(sessionId, profile);
+      await loadRecommendations();
+    } catch (applyError) {
+      setError(applyError.message);
+    }
+  };
+
+  const addCuisinePreference = (cuisine) => {
+    if (!cuisine) return;
+    if (profile.cuisinePreferences.includes(cuisine)) return;
+    setProfile({ ...profile, cuisinePreferences: [...profile.cuisinePreferences, cuisine] });
+  };
+
+  const handleMenuChange = (value) => {
+    if (value === 'change_preferences') {
+      setSkipRatingsOnNext(true);
+      setStep('preferences');
+      return;
+    }
+    if (value === 'my_ratings') {
+      setStep('myRatings');
+      return;
+    }
+    if (value === 'search') {
+      setStep('search');
+      return;
+    }
+    if (value === 'about') {
+      setStep('about');
+      return;
+    }
+    setStep('results');
+  };
+
+  const runRatingsSearch = async () => {
+    try {
+      const items = await api.searchRestaurants(ratingsSearchQuery);
+      setRatingsSearchResults(
+        items.map((item) => ({
+          ...item,
+          currentRating: Number(ratings[item.id] || 0)
+        }))
+      );
+    } catch (searchError) {
+      setError(searchError.message);
+    }
+  };
+
+  const rateFromRatingsSearch = async (restaurant, ratingValue) => {
+    if (localRestaurantIds.has(restaurant.id)) {
+      const nextRatings = { ...ratings, [restaurant.id]: ratingValue };
+      setRatings(nextRatings);
+      await persistLocalRatings(nextRatings);
+      return;
+    }
+
+    const id = restaurant.id || `external:${restaurant.name}`;
+    const existing = externalRatings.find((item) => item.id === id);
+    const next = existing
+      ? externalRatings.map((item) => (item.id === id ? { ...item, rating: ratingValue } : item))
+      : [
+          {
+            id,
+            name: restaurant.name,
+            source: restaurant.source || 'Google',
+            rating: ratingValue
+          },
+          ...externalRatings
+        ];
+    setExternalRatings(next);
+  };
+
+  const rateCustomRestaurant = (name) => {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return;
+
+    const id = `external:${trimmed.toLowerCase().replace(/\s+/g, '-')}`;
+    if (externalRatings.some((item) => item.id === id)) return;
+
+    setExternalRatings([
+      {
+        id,
+        name: trimmed,
+        source: 'Google (manual)',
+        rating: 0
+      },
+      ...externalRatings
+    ]);
+  };
+
+  const runSearchPageSearch = async () => {
+    try {
+      const data = await api.searchRecommendations({
+        sessionId,
+        q: searchQuery,
+        partySize: filters.partySize,
+        timeFrom: filters.timeFrom,
+        timeTo: filters.timeTo,
+        neighborhood: filters.neighborhood
+      });
+      setSearchResults(data);
+    } catch (searchError) {
+      setError(searchError.message);
+      setSearchResults([]);
+    }
+  };
+
+  const combinedRatings = [
+    ...Object.entries(ratings)
+      .filter(([, rating]) => Number(rating) > 0)
+      .map(([restaurantId, rating]) => ({
+        id: restaurantId,
+        name: restaurants.find((item) => item.id === restaurantId)?.name || 'Rated restaurant',
+        source: 'The Restaurant Club',
+        rating: Number(rating)
+      })),
+    ...externalRatings
+  ];
+
   useEffect(() => {
     if (step === 'results') {
       loadRecommendations(filters);
@@ -114,32 +256,80 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, step]);
 
-  if (step === 'preferences') {
-    return <PreferencesForm value={profile} onChange={setProfile} onSubmit={submitPreferences} />;
-  }
-
-  if (step === 'ratings') {
-    return (
-      <RestaurantRater
-        restaurants={restaurants}
-        ratings={ratings}
-        onRate={(restaurantId, rating) => setRatings((prev) => ({ ...prev, [restaurantId]: rating }))}
-        onSkip={(restaurantId) => setRatings((prev) => ({ ...prev, [restaurantId]: 0 }))}
-        onSubmit={submitRatings}
-      />
-    );
-  }
-
   return (
-    <RecommendationsView
-      data={recommendations}
-      openings={openings}
-      filters={filters}
-      neighborhoods={neighborhoods}
-      onFiltersChange={setFilters}
-      onRefresh={handleRefresh}
-      refreshStatus={refreshStatus}
-      error={error}
-    />
+    <>
+      {['results', 'myRatings', 'search', 'about'].includes(step) ? (
+        <div className="top-menu">
+          <label>
+            Menu
+            <select
+              value={
+                step === 'myRatings'
+                  ? 'my_ratings'
+                  : step === 'search'
+                    ? 'search'
+                    : step === 'about'
+                      ? 'about'
+                      : 'recommendations'
+              }
+              onChange={(event) => handleMenuChange(event.target.value)}
+            >
+              <option value="recommendations">Recommendations</option>
+              <option value="change_preferences">Change preferences</option>
+              <option value="my_ratings">My ratings</option>
+              <option value="search">Search</option>
+              <option value="about">About us</option>
+            </select>
+          </label>
+        </div>
+      ) : null}
+
+      {step === 'preferences' ? <PreferencesForm value={profile} onChange={setProfile} onSubmit={submitPreferences} /> : null}
+
+      {step === 'ratings' ? (
+        <RestaurantRater
+          restaurants={restaurants}
+          ratings={ratings}
+          onRate={(restaurantId, rating) => setRatings((prev) => ({ ...prev, [restaurantId]: rating }))}
+          onSkip={(restaurantId) => setRatings((prev) => ({ ...prev, [restaurantId]: 0 }))}
+          onSubmit={submitRatings}
+        />
+      ) : null}
+
+      {step === 'results' ? (
+        <RecommendationsView
+          data={recommendations}
+          openings={openings}
+          filters={filters}
+          neighborhoods={neighborhoods}
+          profile={profile}
+          onProfileChange={setProfile}
+          onAddCuisine={addCuisinePreference}
+          onApplyPreferenceChanges={applyUpdatedPreferences}
+          onFiltersChange={setFilters}
+          onRefresh={handleRefresh}
+          refreshStatus={refreshStatus}
+          error={error}
+        />
+      ) : null}
+
+      {step === 'myRatings' ? (
+        <MyRatingsView
+          combinedRatings={combinedRatings}
+          searchQuery={ratingsSearchQuery}
+          searchResults={ratingsSearchResults}
+          onSearchQueryChange={setRatingsSearchQuery}
+          onSearch={runRatingsSearch}
+          onRateRestaurant={rateFromRatingsSearch}
+          onRateCustomRestaurant={rateCustomRestaurant}
+        />
+      ) : null}
+
+      {step === 'search' ? (
+        <SearchView query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onSearch={runSearchPageSearch} />
+      ) : null}
+
+      {step === 'about' ? <AboutView /> : null}
+    </>
   );
 }

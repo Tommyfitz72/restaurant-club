@@ -7,11 +7,38 @@ const formatTime = (iso) =>
     minute: '2-digit'
   });
 
+const CUISINES = [
+  'Italian',
+  'Japanese',
+  'French',
+  'American',
+  'Mexican',
+  'Thai',
+  'Chinese',
+  'Mediterranean',
+  'Steakhouse',
+  'Seafood',
+  'Indian',
+  'Korean',
+  'Spanish',
+  'Middle Eastern'
+];
+
+const TIME_PRESETS = {
+  early: { startHour: 17, endHour: 18 },
+  prime: { startHour: 18, endHour: 20 },
+  late: { startHour: 20, endHour: 22 }
+};
+
 export default function RecommendationsView({
   data,
   openings,
   filters,
   neighborhoods,
+  profile,
+  onProfileChange,
+  onApplyPreferenceChanges,
+  onAddCuisine,
   onFiltersChange,
   onRefresh,
   refreshStatus,
@@ -19,16 +46,50 @@ export default function RecommendationsView({
 }) {
   return (
     <main className="page-shell">
-      <section className="beli-card">
+      <section className="page-card">
         <div className="toolbar">
           <div>
             <h1>Upcoming reservations (next 2 nights)</h1>
-            <p className="lead">
-              Matched to your preferences and weighted by ratings from Resy, OpenTable, Google, and similar platforms.
-            </p>
+            <p className="muted">Matched to your profile and live availability.</p>
           </div>
           <button type="button" className="secondary-btn" onClick={onRefresh}>
             {refreshStatus === 'loading' ? 'Refreshing...' : 'Scan for New Openings'}
+          </button>
+        </div>
+
+        <div className="prefs-strip">
+          <label>
+            Add cuisine
+            <select onChange={(event) => onAddCuisine(event.target.value)} defaultValue="">
+              <option value="" disabled>
+                Select cuisine
+              </option>
+              {CUISINES.map((cuisine) => (
+                <option key={cuisine} value={cuisine}>
+                  {cuisine}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Preferred time
+            <select
+              value={profile.preferredTimes?.[0] ? `${profile.preferredTimes[0].startHour}-${profile.preferredTimes[0].endHour}` : ''}
+              onChange={(event) => {
+                const selected = event.target.value;
+                if (!selected) return;
+                const [startHour, endHour] = selected.split('-').map(Number);
+                onProfileChange({ ...profile, preferredTimes: [{ startHour, endHour }] });
+              }}
+            >
+              <option value="">Any</option>
+              <option value={`${TIME_PRESETS.early.startHour}-${TIME_PRESETS.early.endHour}`}>Early</option>
+              <option value={`${TIME_PRESETS.prime.startHour}-${TIME_PRESETS.prime.endHour}`}>Prime Time</option>
+              <option value={`${TIME_PRESETS.late.startHour}-${TIME_PRESETS.late.endHour}`}>Late</option>
+            </select>
+          </label>
+          <button type="button" className="secondary-btn" onClick={onApplyPreferenceChanges}>
+            Apply Preferences
           </button>
         </div>
 
@@ -91,41 +152,24 @@ export default function RecommendationsView({
           </div>
         ) : null}
 
-        <p className="disclaimer">
-          Availability is volatile and booking is finalized on partner platforms. Scraping/API usage must comply with
-          each provider&apos;s terms.
-        </p>
-
         <div className="recommendation-list">
           {data.map((entry) => (
-            <article className="recommendation-card" key={entry.restaurant.id}>
-              <img src={entry.restaurant.imageUrl} alt={entry.restaurant.name} loading="lazy" />
-              <div className="recommendation-content">
-                <div className="title-row">
-                  <h2>{entry.restaurant.name}</h2>
-                  <span className="score-pill">{entry.matchScore}% match</span>
-                </div>
-                <p>
-                  {entry.restaurant.cuisineType} • {entry.restaurant.neighborhood} • {'$'.repeat(entry.restaurant.priceRange)}
-                </p>
-
-                {entry.reviewSignals ? (
-                  <p className="meta-line">
-                    Cross-platform score {entry.reviewSignals.aggregate} ({entry.reviewSignals.reviewCount} reviews)
-                  </p>
-                ) : null}
-
-                {entry.hasRecentOpening ? <p className="opening-tag">New opening detected (possible cancellation)</p> : null}
-
-                <p className="explanation">Why: {entry.explanation.join(', ')}</p>
-
-                <div className="slot-list">
-                  {entry.slots.slice(0, 8).map((slot) => (
-                    <a key={slot.id} href={slot.bookingUrl} target="_blank" rel="noreferrer" className="slot-link">
-                      {formatTime(slot.startsAt)} • party {slot.partySize} • {slot.provider}
-                    </a>
-                  ))}
-                </div>
+            <article className="result-card" key={entry.restaurant.id}>
+              <div className="result-head">
+                <strong>{entry.restaurant.name}</strong>
+                <span>{entry.matchScore}% match</span>
+              </div>
+              <p>
+                {entry.restaurant.cuisineType} • {entry.restaurant.neighborhood} • {'$'.repeat(entry.restaurant.priceRange)}
+              </p>
+              {entry.hasRecentOpening ? <p className="opening-tag">New opening detected</p> : null}
+              <p className="muted">Why: {entry.explanation.join(', ')}</p>
+              <div className="slot-list">
+                {entry.slots.slice(0, 8).map((slot) => (
+                  <a key={slot.id} href={slot.bookingUrl} target="_blank" rel="noreferrer" className="slot-link">
+                    {formatTime(slot.startsAt)} • party {slot.partySize} • {slot.provider}
+                  </a>
+                ))}
               </div>
             </article>
           ))}
