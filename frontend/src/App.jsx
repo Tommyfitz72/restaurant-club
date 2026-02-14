@@ -276,6 +276,10 @@ export default function App() {
   ];
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [step]);
+
+  useEffect(() => {
     if (step === 'results') {
       loadRecommendations(filters);
     }
@@ -290,16 +294,13 @@ export default function App() {
 
       {hasCompletedOnboarding ? (
         <div className="top-menu">
-          <label>
-            Menu
-            <select value={menuValueFromStep(step)} onChange={(event) => handleMenuChange(event.target.value)}>
+          <select value={menuValueFromStep(step)} onChange={(event) => handleMenuChange(event.target.value)}>
               <option value="recommendations">Recommendations</option>
               <option value="change_preferences">Change preferences</option>
               <option value="my_ratings">My ratings</option>
               <option value="search">Search</option>
               <option value="about">About us</option>
             </select>
-          </label>
         </div>
       ) : null}
 

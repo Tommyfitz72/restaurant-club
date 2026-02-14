@@ -43,7 +43,6 @@ export default function PreferencesForm({ value, onChange, onSubmit }) {
     <main className="page-shell">
       <section className="hero-shell">
         <p className="hero-kicker">Boston + Cambridge</p>
-        <h1>The Restaurant Club</h1>
         <p className="hero-slogan">We&apos;re bringing back spontaneous dining</p>
       </section>
 
