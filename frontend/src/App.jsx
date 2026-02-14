@@ -17,14 +17,23 @@ const initialProfile = {
   priceMax: 4
 };
 
+const menuValueFromStep = (step) => {
+  if (step === 'myRatings') return 'my_ratings';
+  if (step === 'search') return 'search';
+  if (step === 'about') return 'about';
+  if (step === 'preferences') return 'change_preferences';
+  return 'recommendations';
+};
+
 export default function App() {
   const sessionId = useMemo(() => getSessionId(), []);
 
-  const [step, setStep] = useLocalStorage('restaurantClubStep', 'preferences');
+  const [step, setStep] = useLocalStorage('restaurantClubStep', 'results');
   const [profile, setProfile] = useLocalStorage('restaurantClubProfile', initialProfile);
   const [ratings, setRatings] = useLocalStorage('restaurantClubRatings', {});
   const [externalRatings, setExternalRatings] = useLocalStorage('restaurantClubExternalRatings', []);
   const [skipRatingsOnNext, setSkipRatingsOnNext] = useLocalStorage('restaurantClubSkipRatings', false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('restaurantClubOnboardingDone', false);
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -46,6 +55,12 @@ export default function App() {
   });
 
   const [refreshStatus, setRefreshStatus] = useState('idle');
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding) {
+      setStep('preferences');
+    }
+  }, [hasCompletedOnboarding, setStep]);
 
   useEffect(() => {
     const load = async () => {
@@ -109,6 +124,7 @@ export default function App() {
     try {
       await persistLocalRatings(ratings);
       setSkipRatingsOnNext(false);
+      setHasCompletedOnboarding(true);
       setStep('results');
       await loadRecommendations();
     } catch (submitError) {
@@ -258,22 +274,15 @@ export default function App() {
 
   return (
     <>
-      {['results', 'myRatings', 'search', 'about'].includes(step) ? (
+      <header className="site-header">
+        <h1>The Restaurant Club</h1>
+      </header>
+
+      {hasCompletedOnboarding ? (
         <div className="top-menu">
           <label>
             Menu
-            <select
-              value={
-                step === 'myRatings'
-                  ? 'my_ratings'
-                  : step === 'search'
-                    ? 'search'
-                    : step === 'about'
-                      ? 'about'
-                      : 'recommendations'
-              }
-              onChange={(event) => handleMenuChange(event.target.value)}
-            >
+            <select value={menuValueFromStep(step)} onChange={(event) => handleMenuChange(event.target.value)}>
               <option value="recommendations">Recommendations</option>
               <option value="change_preferences">Change preferences</option>
               <option value="my_ratings">My ratings</option>
