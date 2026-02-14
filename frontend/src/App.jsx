@@ -32,8 +32,10 @@ export default function App() {
   const [profile, setProfile] = useLocalStorage('restaurantClubProfile', initialProfile);
   const [ratings, setRatings] = useLocalStorage('restaurantClubRatings', {});
   const [externalRatings, setExternalRatings] = useLocalStorage('restaurantClubExternalRatings', []);
-  const [skipRatingsOnNext, setSkipRatingsOnNext] = useLocalStorage('restaurantClubSkipRatings', false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('restaurantClubOnboardingDone', false);
+
+  // This flag is intentionally in-memory so a stale persisted value cannot skip ratings unexpectedly.
+  const [skipRatingsOnNext, setSkipRatingsOnNext] = useState(false);
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
@@ -109,11 +111,19 @@ export default function App() {
   const submitPreferences = async () => {
     try {
       await api.saveProfile(sessionId, profile);
+
+      if (!hasCompletedOnboarding) {
+        setSkipRatingsOnNext(false);
+        setStep('ratings');
+        return;
+      }
+
       if (skipRatingsOnNext) {
         setStep('results');
         await loadRecommendations();
         return;
       }
+
       setStep('ratings');
     } catch (submitError) {
       setError(submitError.message);
