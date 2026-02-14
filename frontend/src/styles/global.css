@@ -14,9 +14,6 @@ body {
   font-family: 'Times New Roman', Times, serif;
   background: var(--white);
   color: var(--black);
-  background-image:
-    radial-gradient(circle at 8% 10%, rgba(189, 48, 57, 0.08) 0, rgba(189, 48, 57, 0) 35%),
-    radial-gradient(circle at 92% 22%, rgba(189, 48, 57, 0.06) 0, rgba(189, 48, 57, 0) 40%);
 }
 
 h1,
@@ -36,23 +33,23 @@ select {
 
 .site-header {
   width: min(1120px, 94vw);
-  margin: 1.7rem auto 0.8rem;
+  margin: 0.8rem auto 0.2rem;
 }
 
 .site-header h1 {
   color: var(--red);
-  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
   margin: 0;
   letter-spacing: 0.02em;
 }
 
 .page-shell {
   width: min(1120px, 94vw);
-  margin: 1.8rem auto 3.8rem;
+  margin: 1.2rem auto 2.4rem;
 }
 
 .hero-shell {
-  margin-bottom: 2.3rem;
+  margin-bottom: 1.5rem;
 }
 
 .hero-kicker {
@@ -60,11 +57,6 @@ select {
   font-size: 0.92rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-}
-
-.hero-shell h1 {
-  color: var(--red);
-  font-size: clamp(2.2rem, 5vw, 3.7rem);
 }
 
 .hero-slogan,
@@ -80,12 +72,9 @@ select {
 .restaurant-card,
 .result-card,
 .list-item {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--white);
   border-radius: 18px;
   padding: 1.25rem;
-  box-shadow:
-    0 12px 30px rgba(17, 17, 17, 0.08),
-    0 1px 0 rgba(189, 48, 57, 0.15) inset;
 }
 
 .beli-card h1,
@@ -133,7 +122,6 @@ select,
   background: #fff;
   border-radius: 12px;
   padding: 0.62rem 0.86rem;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
 .chip,
@@ -148,7 +136,6 @@ select,
 .secondary-btn {
   background: var(--red);
   color: var(--white);
-  box-shadow: 0 10px 20px rgba(189, 48, 57, 0.25);
 }
 
 .primary-btn:disabled {
@@ -234,7 +221,6 @@ select,
   font-size: 1.25rem;
   cursor: pointer;
   opacity: 0.42;
-  box-shadow: none;
   padding: 0;
 }
 
@@ -261,20 +247,6 @@ select,
   color: var(--black);
 }
 
-@media (max-width: 700px) {
-  .search-row {
-    flex-direction: column;
-  }
-
-  .page-card,
-  .beli-card,
-  .restaurant-card,
-  .result-card,
-  .list-item {
-    padding: 1rem;
-  }
-}
-
 .rating-value {
   font-size: 0.92rem;
   color: var(--black);
@@ -292,4 +264,77 @@ select,
 
 .sticky-cta {
   width: 100%;
+}
+
+/* First page only: full-height profile builder, larger text, and no boxes/shadows. */
+.preferences-page {
+  min-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+}
+
+.preferences-page .hero-shell {
+  margin-bottom: 0.9rem;
+}
+
+.preferences-page .profile-builder {
+  flex: 1;
+  border-radius: 0;
+  padding: 0.8rem 0.2rem 0;
+}
+
+.preferences-page .profile-builder,
+.preferences-page .chip,
+.preferences-page .primary-btn,
+.preferences-page input,
+.preferences-page select {
+  box-shadow: none;
+}
+
+.preferences-page .profile-builder h2 {
+  font-size: clamp(2rem, 3.3vw, 2.6rem);
+  margin-bottom: 0.9rem;
+}
+
+.preferences-page .lead,
+.preferences-page .section-label,
+.preferences-page label,
+.preferences-page .chip {
+  font-size: 1.12rem;
+}
+
+.preferences-page .chip-grid {
+  gap: 0.95rem;
+  margin-top: 1.2rem;
+}
+
+.preferences-page .chip {
+  padding: 0.75rem 1rem;
+}
+
+.preferences-page .input-row {
+  margin-top: 1.7rem;
+  gap: 1.4rem;
+}
+
+.preferences-page .primary-btn {
+  margin-top: 1.9rem;
+}
+
+@media (max-width: 700px) {
+  .search-row {
+    flex-direction: column;
+  }
+
+  .page-card,
+  .beli-card,
+  .restaurant-card,
+  .result-card,
+  .list-item {
+    padding: 1rem;
+  }
+
+  .preferences-page {
+    min-height: auto;
+  }
 }

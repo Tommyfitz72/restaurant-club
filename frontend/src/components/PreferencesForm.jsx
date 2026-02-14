@@ -40,14 +40,14 @@ export default function PreferencesForm({ value, onChange, onSubmit }) {
   };
 
   return (
-    <main className="page-shell">
+    <main className="page-shell preferences-page">
       <section className="hero-shell">
         <p className="hero-kicker">Boston + Cambridge</p>
-        <p className="hero-slogan">We&apos;re bringing back spontaneous dining</p>
+        <p className="hero-slogan">Spontaneous dining in Boston</p>
       </section>
 
-      <section className="beli-card">
-        <h2>Your dining profile</h2>
+      <section className="beli-card profile-builder">
+        <h2>Your Dining Profile</h2>
         <p className="lead">Pick cuisine and timing preferences so we can tune reservation matches for the next two nights.</p>
 
         <div className="section-label">What types of cuisine do you enjoy?</div>
