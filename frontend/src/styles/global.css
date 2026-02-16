@@ -416,3 +416,20 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+
+.preferences-page .input-row label {
+  font-size: 0.92rem;
+}
+
+.preferences-page .input-row select,
+.preferences-page .input-row input {
+  margin-top: 0.28rem;
+  padding: 0.34rem 0.52rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.preferences-page .section-label {
+  font-size: 1.15rem;
+}

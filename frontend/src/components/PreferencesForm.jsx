@@ -39,12 +39,11 @@ export default function PreferencesForm({ value, keywordCatalog, onToggleKeyword
     <main className="page-shell preferences-page">
       <section className="hero-shell">
         <p className="hero-kicker">Boston + Cambridge</p>
-        <p className="hero-slogan">Spontaneous dining in Boston</p>
+        <p className="hero-slogan">Find Your Meal</p>
       </section>
 
       <section className="beli-card profile-builder">
-        <h2>Your Dining Profile</h2>
-        <p className="lead">Pick cuisine, budget, and keywords from Boston review sources to improve your recommendations.</p>
+        <h2>Tell us what you usually prefer</h2>
 
         <div className="section-label">What types of cuisine do you enjoy?</div>
         <div className="chip-grid">
@@ -99,7 +98,7 @@ export default function PreferencesForm({ value, keywordCatalog, onToggleKeyword
           </label>
         </div>
 
-        <div className="section-label">Select keywords from blogs and review sites</div>
+        <div className="section-label">Select keywords</div>
         <input
           type="text"
           placeholder="Search keywords (e.g. date night, patio, live music)"
