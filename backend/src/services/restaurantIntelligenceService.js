@@ -112,6 +112,24 @@ const PRICE_TO_STYLE = {
 
 const CELEBRITY_CHEF_NAMES = ['contessa', 'no. 9 park', 'oleana', 'sarma', 'o ya', 'grill 23'];
 
+const KNOWN_LIVE_MUSIC_RESTAURANTS = new Set([
+  'the beehive',
+  'the bebop',
+  "darryl's corner bar & kitchen",
+  'grace by nia',
+  'scullers jazz club',
+  "wally's cafe",
+  'the burren',
+  'mad monkfish',
+  'lonestar taco bar',
+  'city winery boston',
+  'regattabar',
+  'hobgoblin',
+  'the dubliner',
+  'carrie nation cocktail club',
+  'parla x viale'
+]);
+
 const normalize = (text) => String(text || '').trim().toLowerCase();
 
 const hash = (text) => {
@@ -143,7 +161,7 @@ const uniq = (values = []) => Array.from(new Set(values.filter(Boolean)));
 const topValuesByType = (tags, type, limit = 5) =>
   tags
     .filter((tag) => tag.tagType === type)
-    .sort((a, b) => b.confidence - a.confidence)
+    .sort((a, b) => Number(b.isVerified) - Number(a.isVerified) || (b.agreementCount || 0) - (a.agreementCount || 0) || (b.verificationScore || 0) - (a.verificationScore || 0) || b.confidence - a.confidence)
     .slice(0, limit)
     .map((tag) => tag.tagValue);
 
@@ -179,7 +197,7 @@ export const buildTraitProfile = (restaurant, intelligence = {}) => {
       ? 'fun and lively'
       : 'romantic';
 
-  const liveMusic = /live music|jazz|piano|dj|band/.test(text);
+  const liveMusic = KNOWN_LIVE_MUSIC_RESTAURANTS.has(normalize(restaurant.name)) || /live music|jazz|piano|dj|band|cabaret|listening room/.test(text);
   const celebrityChef = CELEBRITY_CHEF_NAMES.includes(normalize(restaurant.name)) || /celebrity chef|chef-led/.test(text);
   const outdoorSeating = /patio|outdoor|terrace|roof/.test(text);
   const groupDining = /group|share|social|large party/.test(text);

@@ -38,7 +38,7 @@ export default function RestaurantRater({ restaurants, ratings, onRate, onSkip, 
 
         <div className="sticky-cta-wrap">
           <button type="button" className="primary-btn sticky-cta" onClick={onSubmit}>
-            Show Reservations for the Next Two Nights
+            Find your true matches
           </button>
         </div>
       </section>

@@ -3,14 +3,13 @@ export default function AboutView() {
     <main className="page-shell">
       <section className="page-card">
         <h1>About Us</h1>
-        <p>The Restaurant Club exists to bring back a spontaneous dining experience to the people of Boston.</p>
+        <p>Dishcover is built to help Boston diners discover where they should eat next.</p>
         <p>
-          We help people discover restaurants they will genuinely love by learning cuisine preferences, ratings, vibe,
-          and dining style.
+          We combine your cuisine tastes, your ratings, and verified restaurant signals from trusted food sources
+          to produce stronger restaurant recommendations.
         </p>
         <p>
-          Our mission is simple: make great nights out easier by giving high-quality, personalized restaurant
-          recommendations across Boston and Cambridge.
+          Our mission is to make restaurant discovery smarter, faster, and more personal for Boston and Cambridge.
         </p>
       </section>
     </main>

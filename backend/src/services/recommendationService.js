@@ -214,17 +214,21 @@ export const getRecommendations = async ({
       const keywordScore = scoreKeywordMatch(selectedKeywords, intelligence);
       const traitScore = scoreTraitFit(traitProfile, advancedFilters);
 
-      const total =
-        cuisineScore * 0.26 +
-        directRatingScore * 0.14 +
-        similarCuisineScore * 0.12 +
-        priceScore * 0.08 +
-        externalReviewScore * 0.16 +
-        intelligenceScore * 0.12 +
-        keywordScore * 0.07 +
-        traitScore * 0.05;
+      const keywordPenalty = selectedKeywords.length && keywordScore <= 0.11 ? 0.4 : 1;
 
-      const matchScore = Math.round(clamp(total * 100, 0, 100));
+      const total =
+        cuisineScore * 0.24 +
+        directRatingScore * 0.14 +
+        similarCuisineScore * 0.1 +
+        priceScore * 0.07 +
+        externalReviewScore * 0.16 +
+        intelligenceScore * 0.11 +
+        keywordScore * 0.12 +
+        traitScore * 0.06;
+
+      const adjustedTotal = total * keywordPenalty;
+
+      const matchScore = Math.round(clamp(adjustedTotal * 100, 0, 100));
 
       return {
         restaurant,

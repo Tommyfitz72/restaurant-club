@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api/client.js';
 import PreferencesForm from './components/PreferencesForm.jsx';
 import RestaurantRater from './components/RestaurantRater.jsx';
@@ -6,6 +6,7 @@ import RecommendationsView from './components/RecommendationsView.jsx';
 import MyRatingsView from './components/MyRatingsView.jsx';
 import SearchView from './components/SearchView.jsx';
 import AboutView from './components/AboutView.jsx';
+import AdminReviewView from './components/AdminReviewView.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { getSessionId } from './utils/session.js';
 
@@ -33,6 +34,7 @@ const menuValueFromStep = (step) => {
   if (step === 'myRatings') return 'my_ratings';
   if (step === 'search') return 'search';
   if (step === 'about') return 'about';
+  if (step === 'admin') return 'admin';
   if (step === 'preferences') return 'change_preferences';
   return 'recommendations';
 };
@@ -40,11 +42,11 @@ const menuValueFromStep = (step) => {
 export default function App() {
   const sessionId = useMemo(() => getSessionId(), []);
 
-  const [step, setStep] = useLocalStorage('restaurantClubStep', 'results');
-  const [profile, setProfile] = useLocalStorage('restaurantClubProfile', initialProfile);
-  const [ratings, setRatings] = useLocalStorage('restaurantClubRatings', {});
-  const [externalRatings, setExternalRatings] = useLocalStorage('restaurantClubExternalRatings', []);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('restaurantClubOnboardingDone', false);
+  const [step, setStep] = useLocalStorage('dishcoverStep', 'results');
+  const [profile, setProfile] = useLocalStorage('dishcoverProfile', initialProfile);
+  const [ratings, setRatings] = useLocalStorage('dishcoverRatings', {});
+  const [externalRatings, setExternalRatings] = useLocalStorage('dishcoverExternalRatings', []);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('dishcoverOnboardingDone', false);
 
   const [skipRatingsOnNext, setSkipRatingsOnNext] = useState(false);
 
@@ -54,13 +56,19 @@ export default function App() {
   const [advancedFilterOptions, setAdvancedFilterOptions] = useState({});
   const [recommendations, setRecommendations] = useState([]);
   const [error, setError] = useState('');
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [ratingsSearchQuery, setRatingsSearchQuery] = useState('');
   const [ratingsSearchResults, setRatingsSearchResults] = useState([]);
 
+  const [adminStatus, setAdminStatus] = useState('OPEN');
+  const [adminItems, setAdminItems] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+
   const [filters, setFilters] = useState(initialFilters);
+  const recommendationRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (!hasCompletedOnboarding) {
@@ -99,17 +107,40 @@ export default function App() {
   };
 
   const loadRecommendations = async (nextFilters = filters, nextProfile = profile) => {
+    const requestId = recommendationRequestIdRef.current + 1;
+    recommendationRequestIdRef.current = requestId;
+
     try {
       setError('');
+      setRecommendationLoading(true);
       const result = await api.getRecommendations({
         sessionId,
         ...nextFilters,
         keywords: nextProfile.selectedKeywords || []
       });
+
+      if (recommendationRequestIdRef.current !== requestId) return;
       setRecommendations(result.recommendations || []);
     } catch (fetchError) {
+      if (recommendationRequestIdRef.current !== requestId) return;
       setRecommendations([]);
       setError(fetchError.message);
+    } finally {
+      if (recommendationRequestIdRef.current === requestId) {
+        setRecommendationLoading(false);
+      }
+    }
+  };
+
+  const loadAdminQueue = async (status = adminStatus) => {
+    try {
+      setAdminLoading(true);
+      const items = await api.getReviewQueue({ status, limit: 200 });
+      setAdminItems(items || []);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setAdminLoading(false);
     }
   };
 
@@ -156,13 +187,19 @@ export default function App() {
     }
   };
 
-  const addCuisinePreference = (cuisine) => {
+  const addCuisinePreference = async (cuisine) => {
     if (!cuisine) return;
     if (profile.cuisinePreferences.includes(cuisine)) return;
-    setProfile({ ...profile, cuisinePreferences: [...profile.cuisinePreferences, cuisine] });
+
+    const nextProfile = { ...profile, cuisinePreferences: [...profile.cuisinePreferences, cuisine] };
+    setProfile(nextProfile);
+
+    if (step === 'results') {
+      await applyUpdatedPreferences(nextProfile);
+    }
   };
 
-  const toggleKeywordPreference = (keyword) => {
+  const toggleKeywordPreference = async (keyword) => {
     const exists = (profile.selectedKeywords || []).includes(keyword);
     const selectedKeywords = exists
       ? (profile.selectedKeywords || []).filter((item) => item !== keyword)
@@ -170,6 +207,17 @@ export default function App() {
 
     const nextProfile = { ...profile, selectedKeywords };
     setProfile(nextProfile);
+
+    if (step === 'results') {
+      await applyUpdatedPreferences(nextProfile);
+    }
+  };
+
+  const updateFiltersAndRefresh = async (nextFilters) => {
+    setFilters(nextFilters);
+    if (step === 'results') {
+      await loadRecommendations(nextFilters, profile);
+    }
   };
 
   const handleMenuChange = (value) => {
@@ -188,6 +236,10 @@ export default function App() {
     }
     if (value === 'about') {
       setStep('about');
+      return;
+    }
+    if (value === 'admin') {
+      setStep('admin');
       return;
     }
     setStep('results');
@@ -277,11 +329,21 @@ export default function App() {
       .map(([restaurantId, rating]) => ({
         id: restaurantId,
         name: restaurants.find((item) => item.id === restaurantId)?.name || 'Rated restaurant',
-        source: 'The Restaurant Club',
+        source: 'Dishcover',
         rating: Number(rating)
       })),
     ...externalRatings
   ];
+
+  const resolveReviewItem = async (id) => {
+    await api.resolveReviewQueueItem({ id, action: 'resolve', resolvedBy: 'Dishcover Admin' });
+    await loadAdminQueue(adminStatus);
+  };
+
+  const dismissReviewItem = async (id) => {
+    await api.resolveReviewQueueItem({ id, action: 'dismiss', resolvedBy: 'Dishcover Admin' });
+    await loadAdminQueue(adminStatus);
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -291,13 +353,16 @@ export default function App() {
     if (step === 'results') {
       loadRecommendations(filters, profile);
     }
+    if (step === 'admin') {
+      loadAdminQueue(adminStatus);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, step]);
+  }, [step]);
 
   return (
     <>
       <header className="site-header">
-        <h1>The Restaurant Club</h1>
+        <h1>Dishcover</h1>
       </header>
 
       {hasCompletedOnboarding ? (
@@ -307,6 +372,7 @@ export default function App() {
             <option value="change_preferences">Change preferences</option>
             <option value="my_ratings">My ratings</option>
             <option value="search">Search</option>
+            <option value="admin">Admin</option>
             <option value="about">About us</option>
           </select>
         </div>
@@ -335,6 +401,7 @@ export default function App() {
       {step === 'results' ? (
         <RecommendationsView
           data={recommendations}
+          loading={recommendationLoading}
           filters={filters}
           neighborhoods={neighborhoods}
           profile={profile}
@@ -344,7 +411,7 @@ export default function App() {
           onAddCuisine={addCuisinePreference}
           onToggleKeyword={toggleKeywordPreference}
           onApplyPreferenceChanges={applyUpdatedPreferences}
-          onFiltersChange={setFilters}
+          onFiltersChange={updateFiltersAndRefresh}
           error={error}
         />
       ) : null}
@@ -363,6 +430,20 @@ export default function App() {
 
       {step === 'search' ? (
         <SearchView query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onSearch={runSearchPageSearch} />
+      ) : null}
+
+      {step === 'admin' ? (
+        <AdminReviewView
+          status={adminStatus}
+          onStatusChange={async (status) => {
+            setAdminStatus(status);
+            await loadAdminQueue(status);
+          }}
+          items={adminItems}
+          loading={adminLoading}
+          onResolve={resolveReviewItem}
+          onDismiss={dismissReviewItem}
+        />
       ) : null}
 
       {step === 'about' ? <AboutView /> : null}
