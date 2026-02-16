@@ -68,6 +68,7 @@ export default function App() {
   const [adminLoading, setAdminLoading] = useState(false);
 
   const [filters, setFilters] = useState(initialFilters);
+  const [resultsUpdatedMessage, setResultsUpdatedMessage] = useState('');
   const recommendationRequestIdRef = useRef(0);
 
   useEffect(() => {
@@ -120,10 +121,13 @@ export default function App() {
       });
 
       if (recommendationRequestIdRef.current !== requestId) return;
-      setRecommendations(result.recommendations || []);
+      const nextRecommendations = result.recommendations || [];
+      setRecommendations(nextRecommendations);
+      setResultsUpdatedMessage(`${nextRecommendations.length} results updated`);
     } catch (fetchError) {
       if (recommendationRequestIdRef.current !== requestId) return;
       setRecommendations([]);
+      setResultsUpdatedMessage('0 results updated');
       setError(fetchError.message);
     } finally {
       if (recommendationRequestIdRef.current === requestId) {
@@ -178,10 +182,10 @@ export default function App() {
     }
   };
 
-  const applyUpdatedPreferences = async (nextProfile = profile) => {
+  const applyUpdatedPreferences = async (nextProfile = profile, nextFilters = filters) => {
     try {
       await api.saveProfile(sessionId, nextProfile);
-      await loadRecommendations(filters, nextProfile);
+      await loadRecommendations(nextFilters, nextProfile);
     } catch (applyError) {
       setError(applyError.message);
     }
@@ -217,6 +221,13 @@ export default function App() {
     setFilters(nextFilters);
     if (step === 'results') {
       await loadRecommendations(nextFilters, profile);
+    }
+  };
+
+  const updateProfileAndRefresh = async (nextProfile) => {
+    setProfile(nextProfile);
+    if (step === 'results') {
+      await applyUpdatedPreferences(nextProfile, filters);
     }
   };
 
@@ -407,11 +418,11 @@ export default function App() {
           profile={profile}
           keywordCatalog={keywordCatalog}
           advancedFilterOptions={advancedFilterOptions}
-          onProfileChange={setProfile}
+          onProfileChange={updateProfileAndRefresh}
           onAddCuisine={addCuisinePreference}
           onToggleKeyword={toggleKeywordPreference}
-          onApplyPreferenceChanges={applyUpdatedPreferences}
           onFiltersChange={updateFiltersAndRefresh}
+          resultsUpdatedMessage={resultsUpdatedMessage}
           error={error}
         />
       ) : null}

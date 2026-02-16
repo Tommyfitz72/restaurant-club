@@ -24,16 +24,17 @@ const selectOptions = (options, fallback = []) => {
 
 export default function RecommendationsView({
   data,
+  loading,
   filters,
   neighborhoods,
   profile,
   keywordCatalog,
   advancedFilterOptions,
   onProfileChange,
-  onApplyPreferenceChanges,
   onAddCuisine,
   onToggleKeyword,
   onFiltersChange,
+  resultsUpdatedMessage,
   error
 }) {
   return (
@@ -208,12 +209,11 @@ export default function RecommendationsView({
               })}
             </div>
 
-            <button type="button" className="secondary-btn" onClick={() => onApplyPreferenceChanges(profile)}>
-              Apply Profile + Keywords
-            </button>
           </aside>
 
           <div className="right-results">
+            {loading ? <p className="muted">Updating matches...</p> : null}
+            {!loading && resultsUpdatedMessage ? <p className="muted">{resultsUpdatedMessage}</p> : null}
             {error ? <p className="error-box">{error}</p> : null}
 
             <div className="recommendation-grid compact-grid">
