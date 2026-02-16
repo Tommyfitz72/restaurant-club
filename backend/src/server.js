@@ -2,12 +2,19 @@ import { app } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from './services/db.js';
 import { startScannerJob } from './jobs/scannerJob.js';
+import { startIntelligenceIngestionJob } from './jobs/intelligenceIngestionJob.js';
 
 const start = async () => {
   if (env.enableReservationScanner) {
     await startScannerJob();
   } else {
     console.log('[scanner] disabled (recommendation-only mode)');
+  }
+
+  if (env.enableIntelligenceIngestion) {
+    await startIntelligenceIngestionJob();
+  } else {
+    console.log('[intelligence] ingestion scheduler disabled');
   }
 
   app.listen(env.port, () => {

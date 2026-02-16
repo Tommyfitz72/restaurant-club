@@ -13,6 +13,12 @@ import {
   refreshReservations
 } from '../controllers/reservationController.js';
 import { listRecommendations, searchRecommendations } from '../controllers/recommendationController.js';
+import {
+  getKeywordCatalog,
+  getLatestIntelligenceIngestion,
+  listIntelligenceSources,
+  runIntelligenceIngestionNow
+} from '../controllers/intelligenceController.js';
 
 export const router = Router();
 
@@ -32,6 +38,11 @@ router.put('/profiles/:sessionId/ratings', saveRatings);
 router.post('/reservations/refresh', refreshLimiter, refreshReservations);
 router.get('/reservations/available', getAvailableReservations);
 router.get('/reservations/openings', listRecentOpenings);
+
+router.post('/intelligence/ingest', runIntelligenceIngestionNow);
+router.get('/intelligence/runs/latest', getLatestIntelligenceIngestion);
+router.get('/intelligence/sources', listIntelligenceSources);
+router.get('/intelligence/keywords', getKeywordCatalog);
 
 router.get('/recommendations', listRecommendations);
 router.get('/recommendations/search', searchRecommendations);

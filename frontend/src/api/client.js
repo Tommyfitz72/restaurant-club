@@ -10,6 +10,7 @@ export const api = {
   getPopularRestaurants: async () => parseJson(await fetch(`${API_BASE}/restaurants/popular`)),
   getNeighborhoods: async () => parseJson(await fetch(`${API_BASE}/restaurants/neighborhoods`)),
   searchRestaurants: async (q) => parseJson(await fetch(`${API_BASE}/restaurants/search?q=${encodeURIComponent(q)}`)),
+  getKeywordCatalog: async () => parseJson(await fetch(`${API_BASE}/intelligence/keywords`)),
   saveProfile: async (sessionId, payload) =>
     parseJson(
       await fetch(`${API_BASE}/profiles/${sessionId}`, {
@@ -27,11 +28,19 @@ export const api = {
       })
     ),
   getRecommendations: async (params) => {
-    const qs = new URLSearchParams(params);
+    const normalized = { ...params };
+    if (Array.isArray(normalized.keywords)) {
+      normalized.keywords = normalized.keywords.join(',');
+    }
+    const qs = new URLSearchParams(normalized);
     return parseJson(await fetch(`${API_BASE}/recommendations?${qs.toString()}`));
   },
   searchRecommendations: async (params) => {
-    const qs = new URLSearchParams(params);
+    const normalized = { ...params };
+    if (Array.isArray(normalized.keywords)) {
+      normalized.keywords = normalized.keywords.join(',');
+    }
+    const qs = new URLSearchParams(normalized);
     return parseJson(await fetch(`${API_BASE}/recommendations/search?${qs.toString()}`));
   },
   getRecentOpenings: async () => parseJson(await fetch(`${API_BASE}/reservations/openings`)),

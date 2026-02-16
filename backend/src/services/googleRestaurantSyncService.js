@@ -50,8 +50,18 @@ const pickNeighborhood = (address = '') => {
   return match || 'Boston';
 };
 
+const toGooglePhotoUrl = (place) => {
+  const photoRef = place?.photos?.[0]?.photo_reference;
+  if (!photoRef || !env.googlePlacesApiKey) return null;
+  return `${env.googlePlacesApiBase}/photo?maxwidth=800&photo_reference=${encodeURIComponent(photoRef)}&key=${encodeURIComponent(env.googlePlacesApiKey)}`;
+};
+
 const toRestaurantRecord = (place) => {
   const address = place.formatted_address || 'Boston, MA';
+  const imageUrl =
+    toGooglePhotoUrl(place) ||
+    'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80';
+
   return {
     name: place.name,
     cuisineType: mapCuisine(place.types),
@@ -59,7 +69,7 @@ const toRestaurantRecord = (place) => {
     neighborhood: pickNeighborhood(address),
     address,
     priceRange: Number.isFinite(place.price_level) ? Math.max(1, Math.min(4, place.price_level)) : 2,
-    imageUrl: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80',
+    imageUrl,
     bookingLinks: {
       google: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
       direct: `https://www.google.com/search?q=${encodeURIComponent(`${place.name} Boston reservations`)}`,

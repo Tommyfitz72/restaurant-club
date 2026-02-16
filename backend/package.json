@@ -10,7 +10,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "seed": "node src/data/seed.js",
-    "sync:google": "node scripts/syncGoogleRestaurants.js"
+    "sync:google": "node scripts/syncGoogleRestaurants.js",
+    "ingest:intelligence": "node scripts/ingestIntelligence.js"
   },
   "dependencies": {
     "@prisma/client": "^6.3.1",

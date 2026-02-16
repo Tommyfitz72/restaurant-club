@@ -1,3 +1,5 @@
+import { prisma } from './db.js';
+
 const SOURCE_LIBRARY = [
   { name: 'Eater Boston', url: 'https://boston.eater.com/' },
   { name: 'The Infatuation Boston', url: 'https://www.theinfatuation.com/boston' },
@@ -13,67 +15,102 @@ const SOURCE_LIBRARY = [
   { name: 'Condé Nast Traveler', url: 'https://www.cntraveler.com/gallery/best-restaurants-in-boston' }
 ];
 
+export const KEYWORD_CATALOG = [
+  { keyword: 'date night', category: 'occasion', sources: ['The Infatuation Boston', 'Eater Boston'] },
+  { keyword: 'romantic', category: 'vibe', sources: ['Boston Magazine', 'The Infatuation Boston'] },
+  { keyword: 'fun and lively', category: 'vibe', sources: ['Eater Boston', 'TripAdvisor Boston'] },
+  { keyword: 'quiet', category: 'vibe', sources: ['The Infatuation Boston', 'Condé Nast Traveler'] },
+  { keyword: 'chef tasting', category: 'style', sources: ['Boston Magazine', 'Condé Nast Traveler'] },
+  { keyword: 'celebration', category: 'occasion', sources: ['Boston Magazine', 'OpenTable Boston'] },
+  { keyword: 'group dinner', category: 'occasion', sources: ['Eater Boston', 'OpenTable Boston'] },
+  { keyword: 'business dinner', category: 'occasion', sources: ['OpenTable Boston', 'TripAdvisor Boston'] },
+  { keyword: 'late night', category: 'occasion', sources: ['Eater Boston', 'Hidden Boston'] },
+  { keyword: 'brunch', category: 'occasion', sources: ['The Food Lens', 'Eater Boston'] },
+  { keyword: 'oyster bar', category: 'food', sources: ['Eater Boston', 'TripAdvisor Boston'] },
+  { keyword: 'pasta', category: 'food', sources: ['The Infatuation Boston', 'Boston Magazine'] },
+  { keyword: 'sushi', category: 'food', sources: ['Eater Boston', 'OpenTable Boston'] },
+  { keyword: 'steak', category: 'food', sources: ['OpenTable Boston', 'TripAdvisor Boston'] },
+  { keyword: 'seafood', category: 'food', sources: ['Eater Boston', 'TripAdvisor Boston'] },
+  { keyword: 'small plates', category: 'style', sources: ['Eater Boston', 'The Infatuation Boston'] },
+  { keyword: 'wine list', category: 'style', sources: ['Boston Magazine', 'One for the Table'] },
+  { keyword: 'cocktail bar', category: 'style', sources: ['Eater Boston', 'Hidden Boston'] },
+  { keyword: 'patio', category: 'feature', sources: ['The Food Lens', 'OpenTable Boston'] },
+  { keyword: 'outdoor seating', category: 'feature', sources: ['OpenTable Boston', 'TripAdvisor Boston'] },
+  { keyword: 'live music', category: 'feature', sources: ['Hidden Boston', 'One for the Table'] },
+  { keyword: 'celebrity chef', category: 'feature', sources: ['Boston Magazine', 'Condé Nast Traveler'] },
+  { keyword: 'neighborhood gem', category: 'quality', sources: ['The Infatuation Boston', 'Hidden Boston'] },
+  { keyword: 'highly rated', category: 'quality', sources: ['TripAdvisor Boston', 'OpenTable Boston'] },
+  { keyword: 'classic boston', category: 'quality', sources: ['Boston Magazine', 'Eater Boston'] }
+];
+
+export const ADVANCED_FILTERS = {
+  vibe: ['romantic', 'fun and lively', 'quiet'],
+  size: ['small', 'medium', 'large'],
+  liveMusic: ['yes', 'no'],
+  celebrityChef: ['yes', 'no'],
+  outdoorSeating: ['yes', 'no'],
+  groupDining: ['yes', 'no'],
+  tastingMenu: ['yes', 'no']
+};
+
 const CURATED_NOTES = {
   sarma: {
-    vibes: ['lively', 'share-plates', 'inventive'],
-    style: ['Mediterranean', 'modern', 'small-plates'],
+    vibes: ['fun and lively', 'share-plates', 'inventive'],
+    style: ['mediterranean', 'small plates', 'chef-driven'],
     aspects: ['great for groups', 'bold flavors', 'high-energy room']
   },
   giulia: {
-    vibes: ['romantic', 'cozy', 'neighborhood-favorite'],
-    style: ['Italian', 'pasta-driven', 'chef-led'],
-    aspects: ['excellent handmade pasta', 'date-night friendly', 'polished service']
+    vibes: ['romantic', 'cozy', 'quiet'],
+    style: ['italian', 'pasta', 'chef-driven'],
+    aspects: ['excellent handmade pasta', 'date night', 'polished service']
   },
   oleana: {
-    vibes: ['warm', 'garden-like', 'special-occasion'],
-    style: ['Eastern Mediterranean', 'seasonal'],
-    aspects: ['creative mezze', 'destination dining', 'consistent quality']
+    vibes: ['romantic', 'quiet', 'special-occasion'],
+    style: ['eastern mediterranean', 'seasonal'],
+    aspects: ['creative mezze', 'destination dining', 'patio']
   },
   'neptune oyster': {
-    vibes: ['classic', 'busy', 'iconic'],
-    style: ['Seafood', 'raw-bar'],
-    aspects: ['oyster-focused', 'lobster roll favorite', 'small intimate room']
-  },
-  'no. 9 park': {
-    vibes: ['elegant', 'quiet', 'refined'],
-    style: ['French-Italian', 'fine-dining'],
-    aspects: ['special occasion', 'tasting-menu energy', 'classic Boston institution']
+    vibes: ['fun and lively', 'classic'],
+    style: ['seafood', 'oyster bar'],
+    aspects: ['lobster roll', 'small room', 'high demand']
   },
   contessa: {
-    vibes: ['glamorous', 'scene-y', 'upscale'],
-    style: ['Italian', 'luxury'],
-    aspects: ['great city views', 'polished room', 'celebration spot']
+    vibes: ['romantic', 'fun and lively', 'upscale'],
+    style: ['italian', 'luxury'],
+    aspects: ['special occasion', 'city views', 'celebrity chef']
   },
   toro: {
-    vibes: ['buzzy', 'social', 'energetic'],
-    style: ['Spanish', 'tapas'],
-    aspects: ['shareable menu', 'lively crowd', 'late-night friendly']
+    vibes: ['fun and lively', 'social'],
+    style: ['spanish', 'small plates'],
+    aspects: ['group dinner', 'late night', 'cocktail bar']
   }
 };
 
 const CUISINE_TO_VIBE = {
-  Italian: ['cozy', 'date-night', 'comforting'],
-  Japanese: ['precise', 'minimal', 'chef-driven'],
-  French: ['refined', 'classic', 'special-occasion'],
-  American: ['social', 'versatile', 'neighborhood'],
-  Mexican: ['vibrant', 'group-friendly', 'casual-energy'],
-  Thai: ['flavor-forward', 'casual', 'spice-focused'],
-  Chinese: ['family-style', 'shareable', 'comforting'],
-  Mediterranean: ['bright', 'healthy-leaning', 'share-plates'],
-  Steakhouse: ['upscale', 'classic', 'power-dining'],
-  Seafood: ['coastal', 'fresh', 'classic-new-england'],
-  Indian: ['aromatic', 'bold', 'shareable'],
-  Korean: ['bold', 'grill-friendly', 'social'],
-  Spanish: ['tapas', 'lively', 'wine-friendly'],
-  'Middle Eastern': ['spiced', 'warm', 'shareable']
+  Italian: ['romantic', 'cozy', 'date night'],
+  Japanese: ['quiet', 'precise', 'chef-driven'],
+  French: ['romantic', 'quiet', 'special-occasion'],
+  American: ['fun and lively', 'social', 'group dinner'],
+  Mexican: ['fun and lively', 'social', 'group dinner'],
+  Thai: ['fun and lively', 'flavor-forward'],
+  Chinese: ['group dinner', 'shareable', 'comforting'],
+  Mediterranean: ['small plates', 'romantic', 'group dinner'],
+  Steakhouse: ['business dinner', 'celebration', 'classic'],
+  Seafood: ['classic boston', 'date night', 'highly rated'],
+  Indian: ['bold flavors', 'group dinner'],
+  Korean: ['fun and lively', 'group dinner'],
+  Spanish: ['small plates', 'fun and lively', 'wine list'],
+  'Middle Eastern': ['shareable', 'romantic']
 };
 
 const PRICE_TO_STYLE = {
   1: ['quick', 'casual'],
   2: ['casual', 'reliable'],
-  3: ['elevated', 'date-night'],
-  4: ['fine-dining', 'special-occasion']
+  3: ['date night', 'elevated'],
+  4: ['special-occasion', 'chef tasting']
 };
+
+const CELEBRITY_CHEF_NAMES = ['contessa', 'no. 9 park', 'oleana', 'sarma', 'o ya', 'grill 23'];
 
 const normalize = (text) => String(text || '').trim().toLowerCase();
 
@@ -101,27 +138,191 @@ const summarizeQuality = (aggregate, reviewCount) => {
   return 'mixed-to-positive ratings with niche appeal';
 };
 
+const uniq = (values = []) => Array.from(new Set(values.filter(Boolean)));
+
+const topValuesByType = (tags, type, limit = 5) =>
+  tags
+    .filter((tag) => tag.tagType === type)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, limit)
+    .map((tag) => tag.tagValue);
+
+const yesNoToBool = (value) => {
+  if (!value) return null;
+  if (String(value).toLowerCase() === 'yes') return true;
+  if (String(value).toLowerCase() === 'no') return false;
+  return null;
+};
+
+const classifySize = (tableSignal) => {
+  if (tableSignal >= 120) return 'large';
+  if (tableSignal >= 45) return 'medium';
+  return 'small';
+};
+
+export const buildTraitProfile = (restaurant, intelligence = {}) => {
+  const text = [
+    ...(intelligence.vibes || []),
+    ...(intelligence.style || []),
+    ...(intelligence.aspects || []),
+    String(intelligence.qualitySummary || '')
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  const tableSignal = Number(restaurant?._count?.reservations || 0);
+  const size = classifySize(tableSignal);
+
+  const vibe = text.includes('quiet')
+    ? 'quiet'
+    : text.includes('fun and lively') || text.includes('lively') || text.includes('social')
+      ? 'fun and lively'
+      : 'romantic';
+
+  const liveMusic = /live music|jazz|piano|dj|band/.test(text);
+  const celebrityChef = CELEBRITY_CHEF_NAMES.includes(normalize(restaurant.name)) || /celebrity chef|chef-led/.test(text);
+  const outdoorSeating = /patio|outdoor|terrace|roof/.test(text);
+  const groupDining = /group|share|social|large party/.test(text);
+  const tastingMenu = /tasting|fine-dining|special-occasion/.test(text);
+
+  return {
+    vibe,
+    size,
+    liveMusic,
+    celebrityChef,
+    outdoorSeating,
+    groupDining,
+    tastingMenu,
+    tableSignal
+  };
+};
+
+const mergeIntelligence = (base, dbTags = []) => {
+  if (!dbTags.length) return base;
+
+  const vibes = uniq([...topValuesByType(dbTags, 'VIBE', 6), ...(base.vibes || [])]).slice(0, 6);
+  const style = uniq([...topValuesByType(dbTags, 'STYLE', 6), ...(base.style || [])]).slice(0, 6);
+  const aspects = uniq([...topValuesByType(dbTags, 'ASPECT', 6), ...(base.aspects || [])]).slice(0, 6);
+  const quality = topValuesByType(dbTags, 'QUALITY', 1)[0] || base.qualitySummary;
+
+  const sourceReferences = uniq(dbTags.map((tag) => `${tag.sourceName}|${tag.sourceUrl}`))
+    .slice(0, 6)
+    .map((entry) => {
+      const [name, url] = entry.split('|');
+      return { name, url };
+    });
+
+  return {
+    ...base,
+    vibes,
+    style,
+    aspects,
+    qualitySummary: quality,
+    sourceReferences: sourceReferences.length ? sourceReferences : base.sourceReferences
+  };
+};
+
 export const getRestaurantIntelligence = (restaurant, reviewSignals) => {
   const curated = CURATED_NOTES[normalize(restaurant.name)] || null;
 
-  const vibes = curated?.vibes || CUISINE_TO_VIBE[restaurant.cuisineType] || ['versatile', 'local-favorite'];
-  const style = curated?.style || [restaurant.cuisineType, ...(PRICE_TO_STYLE[restaurant.priceRange] || ['casual'])];
+  const vibes = curated?.vibes || CUISINE_TO_VIBE[restaurant.cuisineType] || ['versatile', 'neighborhood gem'];
+  const style = curated?.style || [String(restaurant.cuisineType || '').toLowerCase(), ...(PRICE_TO_STYLE[restaurant.priceRange] || ['casual'])];
   const aspects =
     curated?.aspects ||
     [
-      `popular in ${restaurant.neighborhood}`,
-      `${restaurant.priceRange >= 3 ? 'higher-end' : 'accessible'} dining style`,
-      `${restaurant.cuisineType} identity`
+      `popular in ${String(restaurant.neighborhood || '').toLowerCase()}`,
+      `${restaurant.priceRange >= 3 ? 'elevated' : 'accessible'} dining style`,
+      `${String(restaurant.cuisineType || '').toLowerCase()} identity`
     ];
 
   const aggregate = Number(reviewSignals?.aggregate || 0);
   const reviewCount = Number(reviewSignals?.reviewCount || 0);
 
+  const qualitySummary = summarizeQuality(aggregate, reviewCount);
+  const sourceReferences = pickSources(restaurant);
+
+  const searchableKeywords = uniq(
+    KEYWORD_CATALOG.map((item) => item.keyword).filter((keyword) => {
+      const haystack = `${vibes.join(' ')} ${style.join(' ')} ${aspects.join(' ')} ${qualitySummary}`.toLowerCase();
+      return haystack.includes(keyword);
+    })
+  );
+
   return {
     vibes,
     style,
     aspects,
-    qualitySummary: summarizeQuality(aggregate, reviewCount),
-    sourceReferences: pickSources(restaurant)
+    qualitySummary,
+    sourceReferences,
+    searchableKeywords
   };
+};
+
+export const getRestaurantIntelligenceForRestaurants = async (restaurants, reviewSignalsByRestaurant) => {
+  if (!restaurants.length) return new Map();
+
+  const restaurantIds = restaurants.map((restaurant) => restaurant.id);
+  const tags = await prisma.restaurantTagSignal.findMany({
+    where: { restaurantId: { in: restaurantIds } }
+  });
+
+  const tagsByRestaurant = new Map();
+  for (const tag of tags) {
+    const list = tagsByRestaurant.get(tag.restaurantId) || [];
+    list.push(tag);
+    tagsByRestaurant.set(tag.restaurantId, list);
+  }
+
+  return new Map(
+    restaurants.map((restaurant) => {
+      const base = getRestaurantIntelligence(restaurant, reviewSignalsByRestaurant.get(restaurant.id));
+      const merged = mergeIntelligence(base, tagsByRestaurant.get(restaurant.id) || []);
+      return [restaurant.id, merged];
+    })
+  );
+};
+
+const includesAny = (text, selected = []) => {
+  if (!selected.length) return true;
+  const normalized = text.toLowerCase();
+  return selected.some((item) => normalized.includes(String(item).toLowerCase()));
+};
+
+export const scoreKeywordMatch = (selectedKeywords = [], intelligence = {}) => {
+  if (!selectedKeywords.length) return 0.55;
+
+  const haystack = [
+    ...(intelligence.vibes || []),
+    ...(intelligence.style || []),
+    ...(intelligence.aspects || []),
+    ...(intelligence.searchableKeywords || []),
+    String(intelligence.qualitySummary || '')
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  const hits = selectedKeywords.filter((keyword) => includesAny(haystack, [keyword]));
+  return Math.max(0.1, Math.min(1, hits.length / selectedKeywords.length));
+};
+
+export const matchesAdvancedFilters = (traitProfile, filters = {}) => {
+  if (filters.vibe && traitProfile.vibe !== filters.vibe) return false;
+  if (filters.size && traitProfile.size !== filters.size) return false;
+
+  const liveMusic = yesNoToBool(filters.liveMusic);
+  if (liveMusic !== null && traitProfile.liveMusic !== liveMusic) return false;
+
+  const celebrityChef = yesNoToBool(filters.celebrityChef);
+  if (celebrityChef !== null && traitProfile.celebrityChef !== celebrityChef) return false;
+
+  const outdoorSeating = yesNoToBool(filters.outdoorSeating);
+  if (outdoorSeating !== null && traitProfile.outdoorSeating !== outdoorSeating) return false;
+
+  const groupDining = yesNoToBool(filters.groupDining);
+  if (groupDining !== null && traitProfile.groupDining !== groupDining) return false;
+
+  const tastingMenu = yesNoToBool(filters.tastingMenu);
+  if (tastingMenu !== null && traitProfile.tastingMenu !== tastingMenu) return false;
+
+  return true;
 };

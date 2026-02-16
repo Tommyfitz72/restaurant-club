@@ -14,7 +14,19 @@ const initialProfile = {
   preferredTimes: [],
   defaultPartySize: 2,
   priceMin: 1,
-  priceMax: 4
+  priceMax: 4,
+  selectedKeywords: []
+};
+
+const initialFilters = {
+  neighborhood: '',
+  vibe: '',
+  size: '',
+  liveMusic: '',
+  celebrityChef: '',
+  outdoorSeating: '',
+  groupDining: '',
+  tastingMenu: ''
 };
 
 const menuValueFromStep = (step) => {
@@ -38,6 +50,8 @@ export default function App() {
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
+  const [keywordCatalog, setKeywordCatalog] = useState([]);
+  const [advancedFilterOptions, setAdvancedFilterOptions] = useState({});
   const [recommendations, setRecommendations] = useState([]);
   const [error, setError] = useState('');
 
@@ -46,9 +60,7 @@ export default function App() {
   const [ratingsSearchQuery, setRatingsSearchQuery] = useState('');
   const [ratingsSearchResults, setRatingsSearchResults] = useState([]);
 
-  const [filters, setFilters] = useState({
-    neighborhood: ''
-  });
+  const [filters, setFilters] = useState(initialFilters);
 
   useEffect(() => {
     if (!hasCompletedOnboarding) {
@@ -59,9 +71,15 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [popular, hoods] = await Promise.all([api.getPopularRestaurants(), api.getNeighborhoods()]);
+        const [popular, hoods, keywordData] = await Promise.all([
+          api.getPopularRestaurants(),
+          api.getNeighborhoods(),
+          api.getKeywordCatalog()
+        ]);
         setRestaurants(popular);
         setNeighborhoods(hoods);
+        setKeywordCatalog(keywordData.keywords || []);
+        setAdvancedFilterOptions(keywordData.advancedFilters || {});
       } catch (loadError) {
         setError(loadError.message);
       }
@@ -80,10 +98,14 @@ export default function App() {
     await api.saveRatings(sessionId, payload);
   };
 
-  const loadRecommendations = async (nextFilters = filters) => {
+  const loadRecommendations = async (nextFilters = filters, nextProfile = profile) => {
     try {
       setError('');
-      const result = await api.getRecommendations({ sessionId, ...nextFilters });
+      const result = await api.getRecommendations({
+        sessionId,
+        ...nextFilters,
+        keywords: nextProfile.selectedKeywords || []
+      });
       setRecommendations(result.recommendations || []);
     } catch (fetchError) {
       setRecommendations([]);
@@ -125,10 +147,10 @@ export default function App() {
     }
   };
 
-  const applyUpdatedPreferences = async () => {
+  const applyUpdatedPreferences = async (nextProfile = profile) => {
     try {
-      await api.saveProfile(sessionId, profile);
-      await loadRecommendations();
+      await api.saveProfile(sessionId, nextProfile);
+      await loadRecommendations(filters, nextProfile);
     } catch (applyError) {
       setError(applyError.message);
     }
@@ -138,6 +160,16 @@ export default function App() {
     if (!cuisine) return;
     if (profile.cuisinePreferences.includes(cuisine)) return;
     setProfile({ ...profile, cuisinePreferences: [...profile.cuisinePreferences, cuisine] });
+  };
+
+  const toggleKeywordPreference = (keyword) => {
+    const exists = (profile.selectedKeywords || []).includes(keyword);
+    const selectedKeywords = exists
+      ? (profile.selectedKeywords || []).filter((item) => item !== keyword)
+      : [...(profile.selectedKeywords || []), keyword];
+
+    const nextProfile = { ...profile, selectedKeywords };
+    setProfile(nextProfile);
   };
 
   const handleMenuChange = (value) => {
@@ -222,7 +254,15 @@ export default function App() {
       const data = await api.searchRecommendations({
         sessionId,
         q: searchQuery,
-        neighborhood: filters.neighborhood
+        neighborhood: filters.neighborhood,
+        keywords: profile.selectedKeywords || [],
+        vibe: filters.vibe,
+        size: filters.size,
+        liveMusic: filters.liveMusic,
+        celebrityChef: filters.celebrityChef,
+        outdoorSeating: filters.outdoorSeating,
+        groupDining: filters.groupDining,
+        tastingMenu: filters.tastingMenu
       });
       setSearchResults(data);
     } catch (searchError) {
@@ -249,7 +289,7 @@ export default function App() {
 
   useEffect(() => {
     if (step === 'results') {
-      loadRecommendations(filters);
+      loadRecommendations(filters, profile);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, step]);
@@ -272,7 +312,15 @@ export default function App() {
         </div>
       ) : null}
 
-      {step === 'preferences' ? <PreferencesForm value={profile} onChange={setProfile} onSubmit={submitPreferences} /> : null}
+      {step === 'preferences' ? (
+        <PreferencesForm
+          value={profile}
+          keywordCatalog={keywordCatalog}
+          onToggleKeyword={toggleKeywordPreference}
+          onChange={setProfile}
+          onSubmit={submitPreferences}
+        />
+      ) : null}
 
       {step === 'ratings' ? (
         <RestaurantRater
@@ -290,8 +338,11 @@ export default function App() {
           filters={filters}
           neighborhoods={neighborhoods}
           profile={profile}
+          keywordCatalog={keywordCatalog}
+          advancedFilterOptions={advancedFilterOptions}
           onProfileChange={setProfile}
           onAddCuisine={addCuisinePreference}
+          onToggleKeyword={toggleKeywordPreference}
           onApplyPreferenceChanges={applyUpdatedPreferences}
           onFiltersChange={setFilters}
           error={error}
