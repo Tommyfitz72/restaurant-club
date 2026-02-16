@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { getNeighborhoods, getPopularRestaurants, searchRestaurants } from '../controllers/restaurantController.js';
+import {
+  getNeighborhoods,
+  getPopularRestaurants,
+  searchRestaurants,
+  syncBostonGoogleRestaurants
+} from '../controllers/restaurantController.js';
 import { getProfile, saveRatings, upsertProfile } from '../controllers/profileController.js';
 import {
   getAvailableReservations,
@@ -16,6 +21,7 @@ router.get('/health', (req, res) => {
 });
 
 router.get('/restaurants/popular', getPopularRestaurants);
+router.post('/restaurants/sync-google', syncBostonGoogleRestaurants);
 router.get('/restaurants/neighborhoods', getNeighborhoods);
 router.get('/restaurants/search', searchRestaurants);
 

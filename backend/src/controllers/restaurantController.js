@@ -3,11 +3,14 @@ import { prisma } from '../services/db.js';
 import { RATABLE_RESTAURANT_COUNT } from '../config/constants.js';
 import { getReviewSignalsForRestaurants } from '../services/reviewSignalsService.js';
 import { env } from '../config/env.js';
+import { ensureGoogleRestaurantCoverage, syncGoogleBostonRestaurants } from '../services/googleRestaurantSyncService.js';
 
 export const getPopularRestaurants = async (req, res, next) => {
   try {
+    await ensureGoogleRestaurantCoverage({ minCount: env.googleRestaurantTargetCount });
+
     const restaurants = await prisma.restaurant.findMany({
-      where: { city: { in: ['Boston', 'Cambridge'] } }
+      where: { city: 'Boston' }
     });
 
     const signals = await getReviewSignalsForRestaurants(restaurants);
@@ -30,6 +33,19 @@ export const getPopularRestaurants = async (req, res, next) => {
       .slice(0, RATABLE_RESTAURANT_COUNT);
 
     res.json(ranked);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const syncBostonGoogleRestaurants = async (req, res, next) => {
+  try {
+    const targetCount = Number(req.body?.targetCount || env.googleRestaurantTargetCount);
+    const result = await syncGoogleBostonRestaurants({ targetCount });
+    res.json({
+      message: 'Google Boston restaurant sync complete',
+      ...result
+    });
   } catch (error) {
     next(error);
   }
@@ -110,7 +126,7 @@ export const searchRestaurants = async (req, res, next) => {
           { neighborhood: { contains: q, mode: 'insensitive' } }
         ]
       },
-      take: 40,
+      take: 80,
       orderBy: [{ city: 'asc' }, { name: 'asc' }]
     });
 

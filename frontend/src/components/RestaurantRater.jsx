@@ -5,7 +5,7 @@ export default function RestaurantRater({ restaurants, ratings, onRate, onSkip, 
     <main className="page-shell">
       <section className="beli-card">
         <div className="title-group">
-          <h1>Rate the Boston 50</h1>
+          <h1>Rank Your Favorite Restaurants in Boston!</h1>
           <p className="lead">
             Quick-rate any restaurants you know. We use your ratings plus review signals from Resy, OpenTable, Google,
             and other sources.

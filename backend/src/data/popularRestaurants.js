@@ -65,14 +65,74 @@ const rows = [
   ['Russell House Tavern', 'American', 'Cambridge', 'Harvard Square', '14 John F Kennedy St, Cambridge, MA', 2]
 ];
 
-const toBookingLinks = (name) => {
+const makeDefaultLinks = (name) => {
   const q = encodeURIComponent(`${name} Boston reservation`);
   return {
     opentable: `https://www.opentable.com/s/?term=${q}`,
     resy: `https://resy.com/cities/bos?query=${q}`,
-    google: `https://www.google.com/search?q=${q}`,
+    google: `https://maps.google.com/?q=${encodeURIComponent(`${name} Boston`)}`,
     direct: `https://www.google.com/search?q=${encodeURIComponent(`${name} official website`)}`
   };
+};
+
+const BOOKING_OVERRIDES = Object.fromEntries(
+  [
+    'Sarma',
+    'Giulia',
+    'Oleana',
+    'Moeca',
+    'Alden & Harlow',
+    'Little Donkey',
+    'Puritan & Company',
+    'Pagu',
+    'Cafe Sushi',
+    'Talulla',
+    'Waypoint',
+    'Gustazo',
+    'Midsummer House',
+    'Mamma Maria',
+    'Contessa',
+    'SRV',
+    'No. 9 Park',
+    'Deuxave',
+    'O Ya',
+    'Uni',
+    'Oishii Boston',
+    'Fox & The Knife',
+    'Neptune Oyster',
+    'Saltie Girl',
+    'Select Oyster Bar',
+    'Mooo.... Beacon Hill',
+    'Grill 23',
+    'Krasi',
+    'Sorellina',
+    'Mistral',
+    'Toro',
+    'Barcelona Wine Bar',
+    'Myers + Chang',
+    'Shore Leave',
+    'Faccia a Faccia',
+    'The Daily Catch',
+    'Lolita Back Bay',
+    'Nud Pob',
+    'Nine Tastes',
+    'Mooncusser',
+    'Tatte Charles St',
+    'Sonsie',
+    'MIDA South End',
+    'Committee',
+    'Nautilus Pier 4',
+    'Row 34',
+    'Menton',
+    'Sumiao Hunan Kitchen',
+    'Zuma',
+    'Batifol',
+    'Russell House Tavern'
+  ].map((name) => [name, makeDefaultLinks(name)])
+);
+
+const toBookingLinks = (name) => {
+  return BOOKING_OVERRIDES[name] || makeDefaultLinks(name);
 };
 
 export const popularRestaurants = rows.map((row, index) => {

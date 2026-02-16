@@ -78,7 +78,12 @@ export const getRecommendations = async ({
   const recentOpenings = await getRecentOpenings();
   const openingRestaurantIds = new Set(recentOpenings.map((item) => item.restaurantId));
 
+  const visitedRestaurantIds = new Set(
+    (profile?.ratings || []).filter((entry) => Number(entry.rating) > 0).map((entry) => entry.restaurantId)
+  );
+
   const filtered = reservations.filter((reservation) => {
+    if (visitedRestaurantIds.has(reservation.restaurantId)) return false;
     if (date && !sameDay(reservation.startsAt, date)) return false;
     if (neighborhood && reservation.restaurant.neighborhood !== neighborhood) return false;
 

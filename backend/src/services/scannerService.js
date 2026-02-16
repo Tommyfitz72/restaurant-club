@@ -15,13 +15,19 @@ import { mockProvider } from './providers/mockProvider.js';
 
 const limit = pLimit(env.maxProviderConcurrency);
 
+const REAL_SLOT_PROVIDERS = new Set(['OPENTABLE', 'RESY']);
+const PROVIDER_HOST_RULES = {
+  OPENTABLE: ['opentable.com'],
+  RESY: ['resy.com']
+};
+
 const buildSlotKey = (slot) => `${slot.provider}:${slot.externalSlotId}:${slot.partySize}`;
 
 const withinLookahead = (startsAt) => {
   const now = Date.now();
   const start = new Date(startsAt).getTime();
   const diffHours = (start - now) / (60 * 60 * 1000);
-  return diffHours >= 0 && diffHours <= RESERVATION_LOOKAHEAD_HOURS;
+  return Number.isFinite(start) && diffHours >= 0 && diffHours <= RESERVATION_LOOKAHEAD_HOURS;
 };
 
 const isPotentialCancellationOpening = (startsAt) => {
@@ -29,6 +35,58 @@ const isPotentialCancellationOpening = (startsAt) => {
   const start = new Date(startsAt).getTime();
   const diffHours = (start - now) / (60 * 60 * 1000);
   return diffHours >= CANCELLATION_MIN_LEAD_HOURS && diffHours <= RESERVATION_LOOKAHEAD_HOURS;
+};
+
+const safeUrl = (value) => {
+  try {
+    return new URL(String(value));
+  } catch {
+    return null;
+  }
+};
+
+const providerLinkForRestaurant = (restaurant, provider) => {
+  const links = restaurant?.bookingLinks || {};
+  return links[String(provider).toLowerCase()] || links.direct || null;
+};
+
+const isAllowedBookingUrl = (provider, bookingUrl) => {
+  const parsed = safeUrl(bookingUrl);
+  if (!parsed) return false;
+
+  const host = parsed.hostname.toLowerCase();
+  const rules = PROVIDER_HOST_RULES[provider] || [];
+
+  return rules.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+};
+
+const normalizeRealSlots = (rawSlots, restaurantsById) => {
+  const normalized = [];
+
+  for (const raw of rawSlots) {
+    if (!REAL_SLOT_PROVIDERS.has(raw.provider)) continue;
+
+    const restaurant = restaurantsById.get(raw.restaurantId);
+    if (!restaurant) continue;
+
+    const startsAt = new Date(raw.startsAt);
+    if (!withinLookahead(startsAt)) continue;
+
+    const bookingUrl = raw.bookingUrl || providerLinkForRestaurant(restaurant, raw.provider);
+    if (!bookingUrl) continue;
+
+    if (env.requireRealBookingUrls && !isAllowedBookingUrl(raw.provider, bookingUrl)) {
+      continue;
+    }
+
+    normalized.push({
+      ...raw,
+      startsAt,
+      bookingUrl
+    });
+  }
+
+  return normalized;
 };
 
 const upsertSlot = async (slot) => {
@@ -63,39 +121,50 @@ const fetchProviderBundles = (restaurants) => {
   if (env.useMockProviders) {
     return [
       { label: 'OPENTABLE', fetch: () => mockProvider.fetchReservations(restaurants, 'OPENTABLE') },
-      { label: 'RESY', fetch: () => mockProvider.fetchReservations(restaurants, 'RESY') },
-      { label: 'GOOGLE', fetch: () => mockProvider.fetchReservations(restaurants, 'GOOGLE') },
-      { label: 'DIRECT', fetch: () => mockProvider.fetchReservations(restaurants, 'DIRECT') }
+      { label: 'RESY', fetch: () => mockProvider.fetchReservations(restaurants, 'RESY') }
     ];
   }
 
-  return [
-    {
+  const bundles = [];
+
+  if (env.openTableApiKey) {
+    bundles.push({
       label: 'OPENTABLE',
       fetch: () =>
         new OpenTableProvider({
           baseUrl: env.openTableApiBase,
           apiKey: env.openTableApiKey
         }).fetchReservations(restaurants)
-    },
-    {
+    });
+  } else {
+    console.warn('[scanner] OPENTABLE_API_KEY is missing; skipping OpenTable slot scanning');
+  }
+
+  if (env.resyApiKey) {
+    bundles.push({
       label: 'RESY',
       fetch: () =>
         new ResyProvider({
           baseUrl: env.resyApiBase,
           apiKey: env.resyApiKey
         }).fetchReservations(restaurants)
-    },
-    {
-      label: 'GOOGLE',
-      fetch: () =>
-        new GoogleProvider({
-          baseUrl: env.googlePlacesApiBase,
-          apiKey: env.googlePlacesApiKey
-        }).fetchReservations(restaurants)
-    },
-    { label: 'DIRECT', fetch: () => directProvider.fetchReservations(restaurants) }
-  ];
+    });
+  } else {
+    console.warn('[scanner] RESY_API_KEY is missing; skipping Resy slot scanning');
+  }
+
+  // Google and direct providers are not treated as reservation-slot sources here.
+  // They can be used for enrichment/search elsewhere.
+  if (env.googlePlacesApiKey) {
+    bundles.push({
+      label: 'GOOGLE_ENRICH_ONLY',
+      fetch: () => new GoogleProvider({ baseUrl: env.googlePlacesApiBase, apiKey: env.googlePlacesApiKey }).fetchReservations([])
+    });
+  }
+
+  bundles.push({ label: 'DIRECT_ENRICH_ONLY', fetch: () => directProvider.fetchReservations([]) });
+
+  return bundles;
 };
 
 const saveRecentOpenings = async (openings) => {
@@ -113,6 +182,8 @@ export const runScanCycle = async () => {
 
   if (!restaurants.length) return { slotsSaved: 0, newOpenings: 0 };
 
+  const restaurantsById = new Map(restaurants.map((item) => [item.id, item]));
+
   const existingSlots = await prisma.reservationSlot.findMany({
     where: {
       available: true,
@@ -129,6 +200,18 @@ export const runScanCycle = async () => {
   });
 
   const existingKeys = new Set(existingSlots.map((slot) => buildSlotKey(slot)));
+  if (!env.useMockProviders && env.replaceFutureSlotsEachScan) {
+    await prisma.reservationSlot.updateMany({
+      where: {
+        startsAt: {
+          gte: new Date(),
+          lte: new Date(Date.now() + RESERVATION_LOOKAHEAD_HOURS * 60 * 60 * 1000)
+        }
+      },
+      data: { available: false }
+    });
+  }
+
   const providers = fetchProviderBundles(restaurants);
 
   const results = await Promise.all(
@@ -144,13 +227,13 @@ export const runScanCycle = async () => {
     )
   );
 
-  const allSlots = results.flat().filter((slot) => withinLookahead(slot.startsAt));
+  const realSlots = normalizeRealSlots(results.flat(), restaurantsById);
   const potentialOpenings = [];
 
-  for (const slot of allSlots) {
+  for (const slot of realSlots) {
     const key = buildSlotKey(slot);
     if (!existingKeys.has(key) && isPotentialCancellationOpening(slot.startsAt)) {
-      const restaurant = restaurants.find((item) => item.id === slot.restaurantId);
+      const restaurant = restaurantsById.get(slot.restaurantId);
       potentialOpenings.push({
         detectedAt: new Date().toISOString(),
         restaurantId: slot.restaurantId,
@@ -171,11 +254,11 @@ export const runScanCycle = async () => {
     'scanner:lastRun',
     {
       ranAt: new Date().toISOString(),
-      slotsSaved: allSlots.length,
+      slotsSaved: realSlots.length,
       potentialCancellationOpenings: potentialOpenings.length
     },
     3600
   );
 
-  return { slotsSaved: allSlots.length, newOpenings: potentialOpenings.length };
+  return { slotsSaved: realSlots.length, newOpenings: potentialOpenings.length };
 };
