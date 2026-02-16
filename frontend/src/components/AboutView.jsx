@@ -3,15 +3,14 @@ export default function AboutView() {
     <main className="page-shell">
       <section className="page-card">
         <h1>About Us</h1>
+        <p>The Restaurant Club exists to bring back a spontaneous dining experience to the people of Boston.</p>
         <p>
-          The Restaurant Club exists to bring back a spontaneous dining experience to the people of Boston.
+          We help people discover restaurants they will genuinely love by learning cuisine preferences, ratings, vibe,
+          and dining style.
         </p>
         <p>
-          We help diners discover last-minute reservation opportunities at top Boston and Cambridge restaurants,
-          especially new openings that appear close to service time.
-        </p>
-        <p>
-          Our mission is simple: make great nights out easier to find, even when plans happen at the last minute.
+          Our mission is simple: make great nights out easier by giving high-quality, personalized restaurant
+          recommendations across Boston and Cambridge.
         </p>
       </section>
     </main>

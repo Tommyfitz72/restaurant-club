@@ -4,7 +4,11 @@ import { prisma } from './services/db.js';
 import { startScannerJob } from './jobs/scannerJob.js';
 
 const start = async () => {
-  await startScannerJob();
+  if (env.enableReservationScanner) {
+    await startScannerJob();
+  } else {
+    console.log('[scanner] disabled (recommendation-only mode)');
+  }
 
   app.listen(env.port, () => {
     console.log(`Backend API listening on http://localhost:${env.port}`);

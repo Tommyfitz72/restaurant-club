@@ -1,18 +1,9 @@
-const formatTime = (iso) =>
-  new Date(iso).toLocaleString([], {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  });
-
 export default function SearchView({ query, results, onQueryChange, onSearch }) {
   return (
     <main className="page-shell">
       <section className="page-card">
         <h1>Search</h1>
-        <p className="muted">Search Boston-area restaurants and see reservation availability + your match score.</p>
+        <p className="muted">Search Boston-area restaurants and view recommendation fit.</p>
 
         <div className="search-row">
           <input
@@ -36,13 +27,7 @@ export default function SearchView({ query, results, onQueryChange, onSearch }) 
               <p>
                 {entry.restaurant.cuisineType} • {entry.restaurant.neighborhood} • {'$'.repeat(entry.restaurant.priceRange)}
               </p>
-              <div className="slot-list">
-                {entry.slots.slice(0, 5).map((slot) => (
-                  <a key={slot.id} className="slot-link" href={slot.bookingUrl} target="_blank" rel="noreferrer">
-                    {formatTime(slot.startsAt)} • {slot.provider}
-                  </a>
-                ))}
-              </div>
+              <p className="muted">Why it matches: {entry.explanation.join(', ')}.</p>
             </article>
           ))}
         </div>

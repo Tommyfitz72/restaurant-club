@@ -28,6 +28,7 @@ export const env = {
   useMockProviders: toBool(process.env.USE_MOCK_PROVIDERS, false),
   requireRealBookingUrls: toBool(process.env.REQUIRE_REAL_BOOKING_URLS, true),
   replaceFutureSlotsEachScan: toBool(process.env.REPLACE_FUTURE_SLOTS_EACH_SCAN, true),
+  enableReservationScanner: toBool(process.env.ENABLE_RESERVATION_SCANNER, false),
   scanIntervalMinutes: Number(process.env.SCAN_INTERVAL_MINUTES || 20),
   maxProviderConcurrency: Number(process.env.MAX_PROVIDER_CONCURRENCY || 2),
   openTableApiBase: process.env.OPENTABLE_API_BASE || 'https://www.opentable.com',

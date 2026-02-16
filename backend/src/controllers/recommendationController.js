@@ -4,23 +4,18 @@ export const listRecommendations = async (req, res, next) => {
   try {
     const recommendations = await getRecommendations({
       sessionId: req.query.sessionId,
-      date: req.query.date,
-      partySize: req.query.partySize,
-      timeFrom: req.query.timeFrom,
-      timeTo: req.query.timeTo,
       neighborhood: req.query.neighborhood
     });
 
     if (!recommendations.length) {
       return res.status(404).json({
-        message:
-          'No reservations match your preferences in the next two nights. Try adjusting filters or tap refresh for new openings.'
+        message: 'No restaurant recommendations match your current preferences. Try adding cuisines or changing neighborhood.'
       });
     }
 
     return res.json({
       disclaimer:
-        'Reservation availability is pulled from partner sources and may change quickly. Booking is finalized on the source platform.',
+        'Recommendations are generated from your preferences, ratings, and multi-source Boston restaurant intelligence.',
       recommendations
     });
   } catch (error) {
@@ -37,9 +32,6 @@ export const searchRecommendations = async (req, res, next) => {
 
     const recommendations = await getRecommendations({
       sessionId: req.query.sessionId,
-      partySize: req.query.partySize,
-      timeFrom: req.query.timeFrom,
-      timeTo: req.query.timeTo,
       neighborhood: req.query.neighborhood,
       restaurantQuery: q
     });

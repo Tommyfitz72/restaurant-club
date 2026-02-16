@@ -34,13 +34,11 @@ export default function App() {
   const [externalRatings, setExternalRatings] = useLocalStorage('restaurantClubExternalRatings', []);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('restaurantClubOnboardingDone', false);
 
-  // This flag is intentionally in-memory so a stale persisted value cannot skip ratings unexpectedly.
   const [skipRatingsOnNext, setSkipRatingsOnNext] = useState(false);
 
   const [restaurants, setRestaurants] = useState([]);
   const [neighborhoods, setNeighborhoods] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
-  const [openings, setOpenings] = useState([]);
   const [error, setError] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,14 +47,8 @@ export default function App() {
   const [ratingsSearchResults, setRatingsSearchResults] = useState([]);
 
   const [filters, setFilters] = useState({
-    date: '',
-    timeFrom: '',
-    timeTo: '',
-    partySize: profile.defaultPartySize || 2,
     neighborhood: ''
   });
-
-  const [refreshStatus, setRefreshStatus] = useState('idle');
 
   useEffect(() => {
     if (!hasCompletedOnboarding) {
@@ -67,14 +59,9 @@ export default function App() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [popular, hoods, recentOpenings] = await Promise.all([
-          api.getPopularRestaurants(),
-          api.getNeighborhoods(),
-          api.getRecentOpenings()
-        ]);
+        const [popular, hoods] = await Promise.all([api.getPopularRestaurants(), api.getNeighborhoods()]);
         setRestaurants(popular);
         setNeighborhoods(hoods);
-        setOpenings(recentOpenings);
       } catch (loadError) {
         setError(loadError.message);
       }
@@ -96,12 +83,8 @@ export default function App() {
   const loadRecommendations = async (nextFilters = filters) => {
     try {
       setError('');
-      const [result, recentOpenings] = await Promise.all([
-        api.getRecommendations({ sessionId, ...nextFilters }),
-        api.getRecentOpenings()
-      ]);
+      const result = await api.getRecommendations({ sessionId, ...nextFilters });
       setRecommendations(result.recommendations || []);
-      setOpenings(recentOpenings || []);
     } catch (fetchError) {
       setRecommendations([]);
       setError(fetchError.message);
@@ -139,18 +122,6 @@ export default function App() {
       await loadRecommendations();
     } catch (submitError) {
       setError(submitError.message);
-    }
-  };
-
-  const handleRefresh = async () => {
-    try {
-      setRefreshStatus('loading');
-      await api.refreshReservations();
-      await loadRecommendations();
-      setRefreshStatus('done');
-    } catch (refreshError) {
-      setError(refreshError.message);
-      setRefreshStatus('idle');
     }
   };
 
@@ -251,9 +222,6 @@ export default function App() {
       const data = await api.searchRecommendations({
         sessionId,
         q: searchQuery,
-        partySize: filters.partySize,
-        timeFrom: filters.timeFrom,
-        timeTo: filters.timeTo,
         neighborhood: filters.neighborhood
       });
       setSearchResults(data);
@@ -295,12 +263,12 @@ export default function App() {
       {hasCompletedOnboarding ? (
         <div className="top-menu">
           <select value={menuValueFromStep(step)} onChange={(event) => handleMenuChange(event.target.value)}>
-              <option value="recommendations">Recommendations</option>
-              <option value="change_preferences">Change preferences</option>
-              <option value="my_ratings">My ratings</option>
-              <option value="search">Search</option>
-              <option value="about">About us</option>
-            </select>
+            <option value="recommendations">Recommendations</option>
+            <option value="change_preferences">Change preferences</option>
+            <option value="my_ratings">My ratings</option>
+            <option value="search">Search</option>
+            <option value="about">About us</option>
+          </select>
         </div>
       ) : null}
 
@@ -319,7 +287,6 @@ export default function App() {
       {step === 'results' ? (
         <RecommendationsView
           data={recommendations}
-          openings={openings}
           filters={filters}
           neighborhoods={neighborhoods}
           profile={profile}
@@ -327,8 +294,6 @@ export default function App() {
           onAddCuisine={addCuisinePreference}
           onApplyPreferenceChanges={applyUpdatedPreferences}
           onFiltersChange={setFilters}
-          onRefresh={handleRefresh}
-          refreshStatus={refreshStatus}
           error={error}
         />
       ) : null}

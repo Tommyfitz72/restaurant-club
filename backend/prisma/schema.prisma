@@ -14,8 +14,21 @@ enum ReservationProvider {
   DIRECT
 }
 
+enum IngestionStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RestaurantTagType {
+  VIBE
+  STYLE
+  ASPECT
+  QUALITY
+}
+
 model Restaurant {
-  id            String            @id @default(cuid())
+  id            String                @id @default(cuid())
   name          String
   cuisineType   String
   city          String
@@ -26,8 +39,9 @@ model Restaurant {
   bookingLinks  Json
   ratings       RestaurantRating[]
   reservations  ReservationSlot[]
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  tagSignals    RestaurantTagSignal[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
   @@unique([name, city])
 }
@@ -75,4 +89,40 @@ model RestaurantRating {
 
   @@unique([profileId, restaurantId])
   @@index([restaurantId])
+}
+
+model SourceIngestionRun {
+  id              String               @id @default(cuid())
+  mode            String
+  status          IngestionStatus      @default(RUNNING)
+  sourceCount     Int                  @default(0)
+  restaurantCount Int                  @default(0)
+  tagCount        Int                  @default(0)
+  notes           String?
+  startedAt       DateTime             @default(now())
+  completedAt     DateTime?
+  tagSignals      RestaurantTagSignal[]
+
+  @@index([startedAt])
+}
+
+model RestaurantTagSignal {
+  id             String            @id @default(cuid())
+  restaurantId   String
+  ingestionRunId String?
+  sourceName     String
+  sourceUrl      String
+  tagType        RestaurantTagType
+  tagValue       String
+  confidence     Float
+  evidence       String?
+  observedAt     DateTime          @default(now())
+  restaurant     Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  ingestionRun   SourceIngestionRun? @relation(fields: [ingestionRunId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId])
+  @@index([tagType])
+  @@index([sourceName])
+  @@index([observedAt])
+  @@unique([restaurantId, sourceName, tagType, tagValue])
 }
