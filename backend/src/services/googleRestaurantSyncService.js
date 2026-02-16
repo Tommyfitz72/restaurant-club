@@ -56,29 +56,6 @@ const toGooglePhotoUrl = (place) => {
   return `${env.googlePlacesApiBase}/photo?maxwidth=800&photo_reference=${encodeURIComponent(photoRef)}&key=${encodeURIComponent(env.googlePlacesApiKey)}`;
 };
 
-const toRestaurantRecord = (place) => {
-  const address = place.formatted_address || 'Boston, MA';
-  const imageUrl =
-    toGooglePhotoUrl(place) ||
-    'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80';
-
-  return {
-    name: place.name,
-    cuisineType: mapCuisine(place.types),
-    city: 'Boston',
-    neighborhood: pickNeighborhood(address),
-    address,
-    priceRange: Number.isFinite(place.price_level) ? Math.max(1, Math.min(4, place.price_level)) : 2,
-    imageUrl,
-    bookingLinks: {
-      google: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`,
-      direct: `https://www.google.com/search?q=${encodeURIComponent(`${place.name} Boston reservations`)}`,
-      opentable: `https://www.opentable.com/s/?term=${encodeURIComponent(place.name)}`,
-      resy: `https://resy.com/cities/bos?query=${encodeURIComponent(place.name)}`
-    }
-  };
-};
-
 const fetchGooglePage = async (query, pageToken) => {
   const response = await axios.get(`${env.googlePlacesApiBase}/textsearch/json`, {
     params: {
@@ -90,6 +67,52 @@ const fetchGooglePage = async (query, pageToken) => {
   });
 
   return response.data || {};
+};
+
+const fetchPlaceDetails = async (placeId) => {
+  if (!placeId || !env.googlePlacesApiKey) return null;
+
+  try {
+    const response = await axios.get(`${env.googlePlacesApiBase}/details/json`, {
+      params: {
+        place_id: placeId,
+        fields: 'website,url',
+        key: env.googlePlacesApiKey
+      },
+      timeout: 10000
+    });
+
+    return response.data?.result || null;
+  } catch {
+    return null;
+  }
+};
+
+const toRestaurantRecord = (place, details) => {
+  const address = place.formatted_address || 'Boston, MA';
+  const imageUrl =
+    toGooglePhotoUrl(place) ||
+    'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1200&q=80';
+
+  const website = details?.website || null;
+  const mapsUrl = details?.url || `https://www.google.com/maps/place/?q=place_id:${place.place_id}`;
+
+  return {
+    name: place.name,
+    cuisineType: mapCuisine(place.types),
+    city: 'Boston',
+    neighborhood: pickNeighborhood(address),
+    address,
+    priceRange: Number.isFinite(place.price_level) ? Math.max(1, Math.min(4, place.price_level)) : 2,
+    imageUrl,
+    bookingLinks: {
+      website,
+      google: mapsUrl,
+      direct: website,
+      opentable: `https://www.opentable.com/s/?term=${encodeURIComponent(place.name)}`,
+      resy: `https://resy.com/cities/bos?query=${encodeURIComponent(place.name)}`
+    }
+  };
 };
 
 const loadGooglePlacesForQuery = async (query) => {
@@ -138,13 +161,17 @@ export const syncGoogleBostonRestaurants = async ({ targetCount = 300 } = {}) =>
 
   let insertedOrUpdated = 0;
   for (const place of deduped.values()) {
-    const record = toRestaurantRecord(place);
+    const details = await fetchPlaceDetails(place.place_id);
+    const record = toRestaurantRecord(place, details);
+
     await prisma.restaurant.upsert({
       where: { name_city: { name: record.name, city: 'Boston' } },
       create: record,
       update: record
     });
+
     insertedOrUpdated += 1;
+    await wait(120);
   }
 
   const totalBostonRestaurants = await prisma.restaurant.count({ where: { city: 'Boston' } });

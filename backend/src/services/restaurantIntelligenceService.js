@@ -175,7 +175,7 @@ const topQuoteSnippets = (tags = [], limit = 3) =>
   tags
     .filter((tag) => tag.evidenceSnippet && !/^(vibe|style|aspect|quality):/i.test(String(tag.evidenceSnippet).trim()))
     .sort(sortBySignalStrength)
-    .map((tag) => String(tag.evidenceSnippet).trim().replace(/s+/g, ' '))
+    .map((tag) => String(tag.evidenceSnippet).trim().replace(/\s+/g, ' '))
     .filter((snippet, index, arr) => snippet.length >= 30 && arr.indexOf(snippet) === index)
     .slice(0, limit);
 
@@ -211,8 +211,11 @@ export const buildTraitProfile = (restaurant, intelligence = {}) => {
       ? 'fun and lively'
       : 'romantic';
 
-  const liveMusic = KNOWN_LIVE_MUSIC_RESTAURANTS.has(normalize(restaurant.name)) || /live music|jazz|piano|dj|band|cabaret|listening room/.test(text);
-  const celebrityChef = CELEBRITY_CHEF_NAMES.includes(normalize(restaurant.name)) || /celebrity chef|chef-led/.test(text);
+  const liveMusic =
+    KNOWN_LIVE_MUSIC_RESTAURANTS.has(normalize(restaurant.name)) ||
+    /live music|jazz|piano|dj|band|cabaret|listening room/.test(text);
+  const celebrityChef =
+    CELEBRITY_CHEF_NAMES.includes(normalize(restaurant.name)) || /celebrity chef|chef-led/.test(text);
   const outdoorSeating = /patio|outdoor|terrace|roof/.test(text);
   const groupDining = /group|share|social|large party/.test(text);
   const tastingMenu = /tasting|fine-dining|special-occasion/.test(text);
@@ -246,6 +249,37 @@ const mergeIntelligence = (base, dbTags = []) => {
 
   const reviewQuotes = topQuoteSnippets(dbTags, 4);
 
+  const keywordSignalMap = {};
+  for (const item of KEYWORD_CATALOG) {
+    const keyword = String(item.keyword || '').toLowerCase();
+    if (!keyword) continue;
+
+    const matchingTags = dbTags.filter((tag) => {
+      const value = String(tag.tagValue || '').toLowerCase();
+      const snippet = String(tag.evidenceSnippet || '').toLowerCase();
+      return value.includes(keyword) || snippet.includes(keyword);
+    });
+
+    if (!matchingTags.length) continue;
+
+    const score = matchingTags.reduce((sum, tag) => {
+      const agreement = Number(tag.agreementCount || 1);
+      const verification = Number(tag.verificationScore || tag.confidence || 0.5);
+      const verifiedBoost = tag.isVerified ? 1.3 : 1;
+      return sum + agreement * verification * verifiedBoost;
+    }, 0);
+
+    const mentions = matchingTags.reduce((sum, tag) => {
+      const snippet = String(tag.evidenceSnippet || '').toLowerCase();
+      return sum + (snippet.includes(keyword) ? 1 : 0);
+    }, 0);
+
+    keywordSignalMap[keyword] = {
+      score: Number(score.toFixed(3)),
+      mentions
+    };
+  }
+
   return {
     ...base,
     vibes,
@@ -253,7 +287,8 @@ const mergeIntelligence = (base, dbTags = []) => {
     aspects,
     qualitySummary: quality,
     sourceReferences: sourceReferences.length ? sourceReferences : base.sourceReferences,
-    reviewQuotes: reviewQuotes.length ? reviewQuotes : base.reviewQuotes || []
+    reviewQuotes: reviewQuotes.length ? reviewQuotes : base.reviewQuotes || [],
+    keywordSignalMap
   };
 };
 
@@ -290,7 +325,8 @@ export const getRestaurantIntelligence = (restaurant, reviewSignals) => {
     qualitySummary,
     sourceReferences,
     searchableKeywords,
-    reviewQuotes: []
+    reviewQuotes: [],
+    keywordSignalMap: {}
   };
 };
 
@@ -332,13 +368,37 @@ export const scoreKeywordMatch = (selectedKeywords = [], intelligence = {}) => {
     ...(intelligence.style || []),
     ...(intelligence.aspects || []),
     ...(intelligence.searchableKeywords || []),
+    ...(intelligence.reviewQuotes || []),
     String(intelligence.qualitySummary || '')
   ]
     .join(' ')
     .toLowerCase();
 
-  const hits = selectedKeywords.filter((keyword) => includesAny(haystack, [keyword]));
-  return Math.max(0.1, Math.min(1, hits.length / selectedKeywords.length));
+  const keywordSignalMap = intelligence.keywordSignalMap || {};
+
+  const scores = selectedKeywords.map((rawKeyword) => {
+    const keyword = String(rawKeyword || '').toLowerCase().trim();
+    if (!keyword) return 0;
+
+    const exactHit = includesAny(haystack, [keyword]);
+    const tokenHit = keyword
+      .split(/\s+/)
+      .filter(Boolean)
+      .every((token) => haystack.includes(token));
+
+    const signal = Number(keywordSignalMap[keyword]?.score || 0);
+    const mentions = Number(keywordSignalMap[keyword]?.mentions || 0);
+
+    const value =
+      (exactHit ? 0.55 : tokenHit ? 0.35 : 0) +
+      Math.min(0.3, signal / 8) +
+      Math.min(0.2, mentions * 0.08);
+
+    return Math.max(0, Math.min(1, value));
+  });
+
+  const avg = scores.reduce((sum, value) => sum + value, 0) / scores.length;
+  return Math.max(0.05, Math.min(1, avg));
 };
 
 export const matchesAdvancedFilters = (traitProfile, filters = {}) => {

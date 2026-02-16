@@ -108,29 +108,45 @@ const toSafeUrl = (value) => {
   return /^https?:\/\//i.test(url) ? url : null;
 };
 
+const isSearchUrl = (url) =>
+  /google\.com\/search|opentable\.com\/s\/?|resy\.com\/cities\/.+\?query=|maps\.google\.com\/\?q=/i.test(
+    String(url || '')
+  );
+
+const isDirectBookingUrl = (url) => {
+  const normalized = String(url || '').toLowerCase();
+  if (!normalized || isSearchUrl(normalized)) return false;
+
+  return (
+    /toast(tab)?\.com/.test(normalized) ||
+    /resy\.com\/.+\/venues\//.test(normalized) ||
+    /opentable\.com\/r\//.test(normalized) ||
+    /(reserve|reservation|book|booking|tables)\b/.test(normalized)
+  );
+};
+
 const getBookingDetails = (restaurant) => {
   const links = restaurant.bookingLinks && typeof restaurant.bookingLinks === 'object' ? restaurant.bookingLinks : {};
-  const candidates = [
+
+  const allLinks = [
     { platform: 'Toast', url: toSafeUrl(links.toast) },
     { platform: 'Resy', url: toSafeUrl(links.resy) },
     { platform: 'OpenTable', url: toSafeUrl(links.opentable) },
     { platform: 'Direct', url: toSafeUrl(links.direct) },
-    { platform: 'Google', url: toSafeUrl(links.google) }
-  ].filter((item) => item.url);
+    { platform: 'Google Maps', url: toSafeUrl(links.google) },
+    { platform: 'Website', url: toSafeUrl(links.website) }
+  ].filter((item) => item.url && !isSearchUrl(item.url));
 
-  const toastCandidate = candidates.find((item) => /toast(tab)?\.com/i.test(item.url));
-  const primary = toastCandidate || candidates[0] || null;
+  const bookingLinks = allLinks.filter((item) => isDirectBookingUrl(item.url));
 
-  const direct = toSafeUrl(links.direct);
-  const websiteUrl =
-    direct && !/google\.com\/search|maps\.google\.com/i.test(direct)
-      ? direct
-      : `https://www.google.com/search?q=${encodeURIComponent(`${restaurant.name} official website`)}`;
+  const websiteCandidates = [toSafeUrl(links.website), toSafeUrl(links.direct), toSafeUrl(links.google)].filter(
+    (url) => url && !isSearchUrl(url)
+  );
 
   return {
-    websiteUrl,
-    booking: primary,
-    links: candidates
+    websiteUrl: websiteCandidates[0] || null,
+    booking: bookingLinks[0] || null,
+    links: bookingLinks
   };
 };
 
@@ -297,7 +313,8 @@ export const getRecommendations = async ({
         qualitySummary: 'well-reviewed and reliable',
         sourceReferences: [],
         searchableKeywords: [],
-        reviewQuotes: []
+        reviewQuotes: [],
+        keywordSignalMap: {}
       };
 
       const traitProfile = buildTraitProfile(restaurant, intelligence);
@@ -321,17 +338,17 @@ export const getRecommendations = async ({
       const keywordScore = scoreKeywordMatch(selectedKeywords, intelligence);
       const traitScore = scoreTraitFit(traitProfile, advancedFilters);
 
-      const keywordPenalty = selectedKeywords.length && keywordScore <= 0.11 ? 0.4 : 1;
+      const keywordPenalty = selectedKeywords.length && keywordScore <= 0.2 ? 0.25 : 1;
 
       const total =
-        cuisineScore * 0.24 +
-        directRatingScore * 0.14 +
-        similarCuisineScore * 0.1 +
-        priceScore * 0.07 +
-        externalReviewScore * 0.16 +
-        intelligenceScore * 0.11 +
-        keywordScore * 0.12 +
-        traitScore * 0.06;
+        cuisineScore * 0.18 +
+        directRatingScore * 0.12 +
+        similarCuisineScore * 0.06 +
+        priceScore * 0.04 +
+        externalReviewScore * 0.14 +
+        intelligenceScore * 0.18 +
+        keywordScore * 0.2 +
+        traitScore * 0.08;
 
       const adjustedTotal = total * keywordPenalty;
       const matchScore = Math.round(clamp(adjustedTotal * 100, 0, 100));
@@ -383,6 +400,7 @@ export const getRecommendations = async ({
           websiteUrl: bookingDetails.websiteUrl,
           booking: bookingDetails.booking,
           bookingLinks: bookingDetails.links,
+          hasDirectReservation: Boolean(bookingDetails.booking),
           photoGallery: buildPhotoGallery(restaurant),
           reviewQuotes: (intelligence.reviewQuotes || []).slice(0, 3),
           sourceReferences: intelligence.sourceReferences || []

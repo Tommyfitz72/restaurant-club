@@ -543,3 +543,26 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.profile-summary-card {
+  background: #faf5f6;
+  border: 1px solid #ead6d9;
+  border-radius: 10px;
+  padding: 0.55rem;
+  margin-bottom: 0.25rem;
+}
+
+.summary-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.35rem 0;
+}
+
+.summary-chip {
+  background: #fff;
+  border: 1px solid #ead6d9;
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.7rem;
+}

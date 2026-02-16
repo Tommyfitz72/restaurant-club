@@ -63,6 +63,23 @@ export default function RecommendationsView({
           <aside className="left-filters">
             <h3 className="sidebar-title">Refine Matches</h3>
 
+            <div className="profile-summary-card">
+              <p className="small-label">Your initial profile</p>
+              <p className="mini-meta">
+                Price {'$'.repeat(Number(profile.priceMin || 1))} - {'$'.repeat(Number(profile.priceMax || 4))} • Party {profile.defaultPartySize || 2}
+              </p>
+              <div className="summary-chip-wrap">
+                {(profile.cuisinePreferences || []).length ? (
+                  (profile.cuisinePreferences || []).map((item) => (
+                    <span key={item} className="summary-chip">{item}</span>
+                  ))
+                ) : (
+                  <span className="muted">No cuisines selected yet.</span>
+                )}
+              </div>
+              <p className="mini-meta">Keywords selected: {(profile.selectedKeywords || []).length}</p>
+            </div>
+
             <label>
               Add cuisine
               <select onChange={(event) => onAddCuisine(event.target.value)} defaultValue="">
@@ -298,12 +315,16 @@ export default function RecommendationsView({
             <div className="modal-links">
               {selectedEntry.detail?.websiteUrl ? (
                 <a href={selectedEntry.detail.websiteUrl} target="_blank" rel="noreferrer">Restaurant website</a>
-              ) : null}
+              ) : (
+                <span className="muted">Restaurant website unavailable.</span>
+              )}
               {selectedEntry.detail?.booking?.url ? (
                 <a href={selectedEntry.detail.booking.url} target="_blank" rel="noreferrer">
                   Book on {selectedEntry.detail.booking.platform}
                 </a>
-              ) : null}
+              ) : (
+                <span className="muted">Direct reservation link unavailable.</span>
+              )}
             </div>
 
             <div className="photo-strip">
