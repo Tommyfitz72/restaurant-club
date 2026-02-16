@@ -158,12 +158,26 @@ const summarizeQuality = (aggregate, reviewCount) => {
 
 const uniq = (values = []) => Array.from(new Set(values.filter(Boolean)));
 
+const sortBySignalStrength = (a, b) =>
+  Number(b.isVerified) - Number(a.isVerified) ||
+  (b.agreementCount || 0) - (a.agreementCount || 0) ||
+  (b.verificationScore || 0) - (a.verificationScore || 0) ||
+  b.confidence - a.confidence;
+
 const topValuesByType = (tags, type, limit = 5) =>
   tags
     .filter((tag) => tag.tagType === type)
-    .sort((a, b) => Number(b.isVerified) - Number(a.isVerified) || (b.agreementCount || 0) - (a.agreementCount || 0) || (b.verificationScore || 0) - (a.verificationScore || 0) || b.confidence - a.confidence)
+    .sort(sortBySignalStrength)
     .slice(0, limit)
     .map((tag) => tag.tagValue);
+
+const topQuoteSnippets = (tags = [], limit = 3) =>
+  tags
+    .filter((tag) => tag.evidenceSnippet && !/^(vibe|style|aspect|quality):/i.test(String(tag.evidenceSnippet).trim()))
+    .sort(sortBySignalStrength)
+    .map((tag) => String(tag.evidenceSnippet).trim().replace(/s+/g, ' '))
+    .filter((snippet, index, arr) => snippet.length >= 30 && arr.indexOf(snippet) === index)
+    .slice(0, limit);
 
 const yesNoToBool = (value) => {
   if (!value) return null;
@@ -230,13 +244,16 @@ const mergeIntelligence = (base, dbTags = []) => {
       return { name, url };
     });
 
+  const reviewQuotes = topQuoteSnippets(dbTags, 4);
+
   return {
     ...base,
     vibes,
     style,
     aspects,
     qualitySummary: quality,
-    sourceReferences: sourceReferences.length ? sourceReferences : base.sourceReferences
+    sourceReferences: sourceReferences.length ? sourceReferences : base.sourceReferences,
+    reviewQuotes: reviewQuotes.length ? reviewQuotes : base.reviewQuotes || []
   };
 };
 
@@ -272,7 +289,8 @@ export const getRestaurantIntelligence = (restaurant, reviewSignals) => {
     aspects,
     qualitySummary,
     sourceReferences,
-    searchableKeywords
+    searchableKeywords,
+    reviewQuotes: []
   };
 };
 

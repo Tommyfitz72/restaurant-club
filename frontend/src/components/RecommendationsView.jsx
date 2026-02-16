@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const CUISINES = [
   'Italian',
   'Japanese',
@@ -22,6 +24,14 @@ const selectOptions = (options, fallback = []) => {
   return fallback;
 };
 
+const toBandLabel = (score) => {
+  if (score > 80) return 'High match';
+  if (score >= 40) return 'Average match';
+  return 'Low match';
+};
+
+const toSiteRating = (value) => (Number(value) > 0 ? Number(value).toFixed(1) : 'N/A');
+
 export default function RecommendationsView({
   data,
   loading,
@@ -37,6 +47,8 @@ export default function RecommendationsView({
   resultsUpdatedMessage,
   error
 }) {
+  const [selectedEntry, setSelectedEntry] = useState(null);
+
   return (
     <main className="page-shell">
       <section className="page-card">
@@ -208,7 +220,6 @@ export default function RecommendationsView({
                 );
               })}
             </div>
-
           </aside>
 
           <div className="right-results">
@@ -218,7 +229,19 @@ export default function RecommendationsView({
 
             <div className="recommendation-grid compact-grid">
               {data.map((entry) => (
-                <article className="result-card compact-card" key={entry.restaurant.id}>
+                <article
+                  className="result-card compact-card clickable-card"
+                  key={entry.restaurant.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedEntry(entry)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setSelectedEntry(entry);
+                    }
+                  }}
+                >
                   <img className="result-image compact-image" src={entry.restaurant.imageUrl} alt={entry.restaurant.name} loading="lazy" />
 
                   <div className="result-head compact-head">
@@ -231,12 +254,66 @@ export default function RecommendationsView({
                   </p>
 
                   <p className="mini-why">Why: {(entry.explanation || []).slice(0, 2).join(', ')}</p>
+                  <button type="button" className="link-btn detail-btn">View details</button>
                 </article>
               ))}
             </div>
           </div>
         </div>
       </section>
+
+      {selectedEntry ? (
+        <div className="modal-overlay" onClick={() => setSelectedEntry(null)}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{selectedEntry.restaurant.name}</h2>
+              <button type="button" className="link-btn" onClick={() => setSelectedEntry(null)}>
+                Close
+              </button>
+            </div>
+
+            <p className="muted">
+              {selectedEntry.restaurant.cuisineType} • {selectedEntry.restaurant.neighborhood} • {'$'.repeat(selectedEntry.restaurant.priceRange)}
+            </p>
+
+            <div className="modal-metrics">
+              <p><strong>Match:</strong> {selectedEntry.matchScore}% ({toBandLabel(selectedEntry.matchScore)})</p>
+              <p><strong>Resy:</strong> {toSiteRating(selectedEntry.detail?.ratingsBySite?.resy)}</p>
+              <p><strong>OpenTable:</strong> {toSiteRating(selectedEntry.detail?.ratingsBySite?.opentable)}</p>
+              <p><strong>Google:</strong> {toSiteRating(selectedEntry.detail?.ratingsBySite?.google)}</p>
+              <p><strong>Overall:</strong> {toSiteRating(selectedEntry.detail?.ratingsBySite?.aggregate)}</p>
+            </div>
+
+            <p>{selectedEntry.detail?.description}</p>
+            <p className="muted">{selectedEntry.detail?.matchNarrative}</p>
+
+            {(selectedEntry.detail?.reviewQuotes || []).length ? (
+              <div className="quote-list">
+                {(selectedEntry.detail.reviewQuotes || []).map((quote) => (
+                  <blockquote key={quote}>{quote}</blockquote>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="modal-links">
+              {selectedEntry.detail?.websiteUrl ? (
+                <a href={selectedEntry.detail.websiteUrl} target="_blank" rel="noreferrer">Restaurant website</a>
+              ) : null}
+              {selectedEntry.detail?.booking?.url ? (
+                <a href={selectedEntry.detail.booking.url} target="_blank" rel="noreferrer">
+                  Book on {selectedEntry.detail.booking.platform}
+                </a>
+              ) : null}
+            </div>
+
+            <div className="photo-strip">
+              {(selectedEntry.detail?.photoGallery || []).map((url) => (
+                <img key={url} src={url} alt={`${selectedEntry.restaurant.name} view`} loading="lazy" />
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

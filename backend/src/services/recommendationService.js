@@ -103,6 +103,112 @@ const explanation = ({
   return reasons;
 };
 
+const toSafeUrl = (value) => {
+  const url = String(value || '').trim();
+  return /^https?:\/\//i.test(url) ? url : null;
+};
+
+const getBookingDetails = (restaurant) => {
+  const links = restaurant.bookingLinks && typeof restaurant.bookingLinks === 'object' ? restaurant.bookingLinks : {};
+  const candidates = [
+    { platform: 'Toast', url: toSafeUrl(links.toast) },
+    { platform: 'Resy', url: toSafeUrl(links.resy) },
+    { platform: 'OpenTable', url: toSafeUrl(links.opentable) },
+    { platform: 'Direct', url: toSafeUrl(links.direct) },
+    { platform: 'Google', url: toSafeUrl(links.google) }
+  ].filter((item) => item.url);
+
+  const toastCandidate = candidates.find((item) => /toast(tab)?\.com/i.test(item.url));
+  const primary = toastCandidate || candidates[0] || null;
+
+  const direct = toSafeUrl(links.direct);
+  const websiteUrl =
+    direct && !/google\.com\/search|maps\.google\.com/i.test(direct)
+      ? direct
+      : `https://www.google.com/search?q=${encodeURIComponent(`${restaurant.name} official website`)}`;
+
+  return {
+    websiteUrl,
+    booking: primary,
+    links: candidates
+  };
+};
+
+const toMatchBand = (score) => {
+  if (score > 80) return 'high';
+  if (score >= 40) return 'average';
+  return 'low';
+};
+
+const buildMatchNarrative = ({
+  matchScore,
+  cuisineScore,
+  priceScore,
+  keywordScore,
+  traitScore,
+  intelligenceScore,
+  explanation: reasons
+}) => {
+  const band = toMatchBand(matchScore);
+  const style =
+    intelligenceScore > 0.7
+      ? 'The restaurant style strongly lines up with your profile.'
+      : intelligenceScore > 0.5
+        ? 'The style fit is decent for your profile.'
+        : 'The style fit is weaker for your profile.';
+  const vibe =
+    traitScore > 0.7
+      ? 'Vibe and dining format align well with what you selected.'
+      : traitScore > 0.5
+        ? 'Vibe alignment is moderate.'
+        : 'Vibe alignment is limited with your current filters.';
+  const cuisine = cuisineScore > 0.8 ? 'Cuisine preference match is strong.' : 'Cuisine match is partial.';
+  const budget = priceScore > 0.8 ? 'Budget fit is solid.' : 'Budget fit is mixed.';
+  const keywords =
+    keywordScore > 0.7
+      ? 'Your selected keywords are strongly represented.'
+      : keywordScore > 0.4
+        ? 'Some selected keywords are present.'
+        : 'Few of your selected keywords are present.';
+
+  const opening =
+    band === 'high'
+      ? 'This is a high-confidence match for your taste profile.'
+      : band === 'average'
+        ? 'This is a moderate match and could work well depending on mood and occasion.'
+        : 'This is currently a lower match for your profile settings.';
+
+  const reasonLine = reasons.length ? `Top signals: ${reasons.slice(0, 3).join('; ')}.` : '';
+  return `${opening} ${cuisine} ${budget} ${keywords} ${vibe} ${style} ${reasonLine}`.trim();
+};
+
+const buildFunDescription = (restaurant, intelligence = {}) => {
+  const vibes = (intelligence.vibes || []).slice(0, 2).join(' and ') || 'a distinctive vibe';
+  const styles = (intelligence.style || []).slice(0, 2).join(', ') || restaurant.cuisineType;
+  const aspects = (intelligence.aspects || []).slice(0, 2).join(' • ');
+  const quotes = (intelligence.reviewQuotes || []).slice(0, 2).map((quote) => `"${quote}"`);
+
+  return [
+    `${restaurant.name} in ${restaurant.neighborhood} is a ${styles} spot with ${vibes}.`,
+    aspects ? `What stands out: ${aspects}.` : '',
+    ...quotes
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
+const buildPhotoGallery = (restaurant) => {
+  const base = String(restaurant.imageUrl || '').trim();
+  const fallback = [
+    `https://source.unsplash.com/900x600/?${encodeURIComponent(`${restaurant.name} restaurant`)}`,
+    `https://source.unsplash.com/900x600/?${encodeURIComponent(`${restaurant.name} dining room`)}`,
+    `https://source.unsplash.com/900x600/?${encodeURIComponent(`${restaurant.name} boston`)}`
+  ];
+
+  const gallery = [base, ...fallback].filter(Boolean);
+  return Array.from(new Set(gallery)).slice(0, 4);
+};
+
 export const getRecommendations = async ({
   sessionId,
   neighborhood,
@@ -190,7 +296,8 @@ export const getRecommendations = async ({
         aspects: [],
         qualitySummary: 'well-reviewed and reliable',
         sourceReferences: [],
-        searchableKeywords: []
+        searchableKeywords: [],
+        reviewQuotes: []
       };
 
       const traitProfile = buildTraitProfile(restaurant, intelligence);
@@ -227,8 +334,24 @@ export const getRecommendations = async ({
         traitScore * 0.06;
 
       const adjustedTotal = total * keywordPenalty;
-
       const matchScore = Math.round(clamp(adjustedTotal * 100, 0, 100));
+
+      const reasonList = explanation({
+        cuisineScore,
+        directRatingScore,
+        similarCuisineScore,
+        priceScore,
+        externalReviewScore,
+        intelligenceScore,
+        keywordScore,
+        traitScore,
+        intelligence,
+        traitProfile,
+        selectedKeywords
+      });
+
+      const bookingDetails = getBookingDetails(restaurant);
+      const matchBand = toMatchBand(matchScore);
 
       return {
         restaurant,
@@ -236,19 +359,34 @@ export const getRecommendations = async ({
         intelligence,
         traitProfile,
         matchScore,
-        explanation: explanation({
-          cuisineScore,
-          directRatingScore,
-          similarCuisineScore,
-          priceScore,
-          externalReviewScore,
-          intelligenceScore,
-          keywordScore,
-          traitScore,
-          intelligence,
-          traitProfile,
-          selectedKeywords
-        })
+        matchBand,
+        explanation: reasonList,
+        detail: {
+          description: buildFunDescription(restaurant, intelligence),
+          ratingsBySite: {
+            resy: Number(reviewSignals?.sources?.resy || 0),
+            opentable: Number(reviewSignals?.sources?.opentable || 0),
+            google: Number(reviewSignals?.sources?.google || 0),
+            other: Number(reviewSignals?.sources?.other || 0),
+            aggregate: Number(reviewSignals?.aggregate || 0),
+            reviewCount: Number(reviewSignals?.reviewCount || 0)
+          },
+          matchNarrative: buildMatchNarrative({
+            matchScore,
+            cuisineScore,
+            priceScore,
+            keywordScore,
+            traitScore,
+            intelligenceScore,
+            explanation: reasonList
+          }),
+          websiteUrl: bookingDetails.websiteUrl,
+          booking: bookingDetails.booking,
+          bookingLinks: bookingDetails.links,
+          photoGallery: buildPhotoGallery(restaurant),
+          reviewQuotes: (intelligence.reviewQuotes || []).slice(0, 3),
+          sourceReferences: intelligence.sourceReferences || []
+        }
       };
     })
     .filter(Boolean);
