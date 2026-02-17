@@ -351,7 +351,10 @@ export const getRecommendations = async ({
         traitScore * 0.08;
 
       const adjustedTotal = total * keywordPenalty;
-      const matchScore = Math.round(clamp(adjustedTotal * 100, 0, 100));
+      const qualityBoost = Math.max(0, (externalReviewScore - 0.5) * 0.18);
+      const uniquenessBoost = Math.max(0, Math.abs(keywordScore - 0.5) * 0.12 + Math.abs(intelligenceScore - 0.5) * 0.08);
+      const rawScore = clamp(adjustedTotal + qualityBoost + uniquenessBoost, 0, 1);
+      const matchScore = Math.round(clamp(Math.pow(rawScore, 1.12) * 100, 0, 100));
 
       const reasonList = explanation({
         cuisineScore,
@@ -409,5 +412,15 @@ export const getRecommendations = async ({
     })
     .filter(Boolean);
 
-  return scored.sort((a, b) => b.matchScore - a.matchScore).slice(0, 100);
+  const ranked = scored.sort((a, b) => b.matchScore - a.matchScore).slice(0, 100);
+
+  return ranked.map((entry, index) => {
+    const percentile = ranked.length > 1 ? 1 - index / (ranked.length - 1) : 1;
+    const spread = Math.round((percentile - 0.5) * 18);
+    const variedScore = clamp(entry.matchScore + spread, 5, 99);
+    return {
+      ...entry,
+      matchScore: variedScore
+    };
+  });
 };

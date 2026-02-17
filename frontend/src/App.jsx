@@ -6,14 +6,12 @@ import RecommendationsView from './components/RecommendationsView.jsx';
 import MyRatingsView from './components/MyRatingsView.jsx';
 import SearchView from './components/SearchView.jsx';
 import AboutView from './components/AboutView.jsx';
-import AdminReviewView from './components/AdminReviewView.jsx';
 import { useLocalStorage } from './hooks/useLocalStorage.js';
 import { getSessionId } from './utils/session.js';
 
 const initialProfile = {
   cuisinePreferences: [],
   preferredTimes: [],
-  defaultPartySize: 2,
   priceMin: 1,
   priceMax: 4,
   selectedKeywords: []
@@ -34,9 +32,28 @@ const menuValueFromStep = (step) => {
   if (step === 'myRatings') return 'my_ratings';
   if (step === 'search') return 'search';
   if (step === 'about') return 'about';
-  if (step === 'admin') return 'admin';
   if (step === 'preferences') return 'change_preferences';
   return 'recommendations';
+};
+
+const inferKeywordsFromNotes = (notesByRestaurant = {}, keywordCatalog = []) => {
+  const text = Object.values(notesByRestaurant)
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ');
+
+  if (!text.trim()) return [];
+
+  const catalogHits = (keywordCatalog || [])
+    .map((item) => item.keyword)
+    .filter((keyword) => text.includes(String(keyword || '').toLowerCase()));
+
+  const fallbackTokens = text
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length >= 4)
+    .slice(0, 25);
+
+  return Array.from(new Set([...catalogHits, ...fallbackTokens])).slice(0, 30);
 };
 
 export default function App() {
@@ -46,6 +63,7 @@ export default function App() {
   const [profile, setProfile] = useLocalStorage('dishcoverProfile', initialProfile);
   const [ratings, setRatings] = useLocalStorage('dishcoverRatings', {});
   const [externalRatings, setExternalRatings] = useLocalStorage('dishcoverExternalRatings', []);
+  const [ratingsNotes, setRatingsNotes] = useLocalStorage('dishcoverRatingsNotes', {});
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage('dishcoverOnboardingDone', false);
 
   const [skipRatingsOnNext, setSkipRatingsOnNext] = useState(false);
@@ -62,10 +80,6 @@ export default function App() {
   const [searchResults, setSearchResults] = useState([]);
   const [ratingsSearchQuery, setRatingsSearchQuery] = useState('');
   const [ratingsSearchResults, setRatingsSearchResults] = useState([]);
-
-  const [adminStatus, setAdminStatus] = useState('OPEN');
-  const [adminItems, setAdminItems] = useState([]);
-  const [adminLoading, setAdminLoading] = useState(false);
 
   const [filters, setFilters] = useState(initialFilters);
   const [resultsUpdatedMessage, setResultsUpdatedMessage] = useState('');
@@ -136,18 +150,6 @@ export default function App() {
     }
   };
 
-  const loadAdminQueue = async (status = adminStatus) => {
-    try {
-      setAdminLoading(true);
-      const items = await api.getReviewQueue({ status, limit: 200 });
-      setAdminItems(items || []);
-    } catch (loadError) {
-      setError(loadError.message);
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
   const submitPreferences = async () => {
     try {
       await api.saveProfile(sessionId, profile);
@@ -173,10 +175,18 @@ export default function App() {
   const submitRatings = async () => {
     try {
       await persistLocalRatings(ratings);
+
+      const noteKeywords = inferKeywordsFromNotes(ratingsNotes, keywordCatalog);
+      const mergedKeywords = Array.from(new Set([...(profile.selectedKeywords || []), ...noteKeywords]));
+      const nextProfile = { ...profile, selectedKeywords: mergedKeywords };
+
+      setProfile(nextProfile);
+      await api.saveProfile(sessionId, nextProfile);
+
       setSkipRatingsOnNext(false);
       setHasCompletedOnboarding(true);
       setStep('results');
-      await loadRecommendations();
+      await loadRecommendations(filters, nextProfile);
     } catch (submitError) {
       setError(submitError.message);
     }
@@ -247,10 +257,6 @@ export default function App() {
     }
     if (value === 'about') {
       setStep('about');
-      return;
-    }
-    if (value === 'admin') {
-      setStep('admin');
       return;
     }
     setStep('results');
@@ -346,16 +352,6 @@ export default function App() {
     ...externalRatings
   ];
 
-  const resolveReviewItem = async (id) => {
-    await api.resolveReviewQueueItem({ id, action: 'resolve', resolvedBy: 'Dishcover Admin' });
-    await loadAdminQueue(adminStatus);
-  };
-
-  const dismissReviewItem = async (id) => {
-    await api.resolveReviewQueueItem({ id, action: 'dismiss', resolvedBy: 'Dishcover Admin' });
-    await loadAdminQueue(adminStatus);
-  };
-
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [step]);
@@ -363,9 +359,6 @@ export default function App() {
   useEffect(() => {
     if (step === 'results') {
       loadRecommendations(filters, profile);
-    }
-    if (step === 'admin') {
-      loadAdminQueue(adminStatus);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
@@ -383,7 +376,6 @@ export default function App() {
             <option value="change_preferences">Change preferences</option>
             <option value="my_ratings">My ratings</option>
             <option value="search">Search</option>
-            <option value="admin">Admin</option>
             <option value="about">About us</option>
           </select>
         </div>
@@ -403,8 +395,10 @@ export default function App() {
         <RestaurantRater
           restaurants={restaurants}
           ratings={ratings}
+          notesByRestaurant={ratingsNotes}
           onRate={(restaurantId, rating) => setRatings((prev) => ({ ...prev, [restaurantId]: rating }))}
           onSkip={(restaurantId) => setRatings((prev) => ({ ...prev, [restaurantId]: 0 }))}
+          onNoteChange={(restaurantId, note) => setRatingsNotes((prev) => ({ ...prev, [restaurantId]: note }))}
           onSubmit={submitRatings}
         />
       ) : null}
@@ -441,20 +435,6 @@ export default function App() {
 
       {step === 'search' ? (
         <SearchView query={searchQuery} results={searchResults} onQueryChange={setSearchQuery} onSearch={runSearchPageSearch} />
-      ) : null}
-
-      {step === 'admin' ? (
-        <AdminReviewView
-          status={adminStatus}
-          onStatusChange={async (status) => {
-            setAdminStatus(status);
-            await loadAdminQueue(status);
-          }}
-          items={adminItems}
-          loading={adminLoading}
-          onResolve={resolveReviewItem}
-          onDismiss={dismissReviewItem}
-        />
       ) : null}
 
       {step === 'about' ? <AboutView /> : null}

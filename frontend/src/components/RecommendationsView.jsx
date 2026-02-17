@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const CUISINES = [
   'Italian',
@@ -48,197 +48,24 @@ export default function RecommendationsView({
   error
 }) {
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [showRefinePanel, setShowRefinePanel] = useState(false);
+
+  const sortedKeywords = useMemo(() => (keywordCatalog || []).slice(0, 24), [keywordCatalog]);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell compressed-page">
       <section className="page-card">
-        <div className="toolbar">
+        <div className="toolbar tight-toolbar">
           <div>
             <h1>Restaurant Matches For You</h1>
-            <p className="muted">Sorted by match % using your profile, ratings, selected keywords, and source-informed vibe filters.</p>
+            <p className="muted compact-muted">Sorted by match % using your profile, ratings, selected keywords, and source-informed signals.</p>
           </div>
+          <button type="button" className="secondary-btn" onClick={() => setShowRefinePanel(true)}>
+            Refine Matches
+          </button>
         </div>
 
-        <div className="results-layout">
-          <aside className="left-filters">
-            <h3 className="sidebar-title">Refine Matches</h3>
-
-            <div className="profile-summary-card">
-              <p className="small-label">Your initial profile</p>
-              <p className="mini-meta">
-                Price {'$'.repeat(Number(profile.priceMin || 1))} - {'$'.repeat(Number(profile.priceMax || 4))} • Party {profile.defaultPartySize || 2}
-              </p>
-              <div className="summary-chip-wrap">
-                {(profile.cuisinePreferences || []).length ? (
-                  (profile.cuisinePreferences || []).map((item) => (
-                    <span key={item} className="summary-chip">{item}</span>
-                  ))
-                ) : (
-                  <span className="muted">No cuisines selected yet.</span>
-                )}
-              </div>
-              <p className="mini-meta">Keywords selected: {(profile.selectedKeywords || []).length}</p>
-            </div>
-
-            <label>
-              Add cuisine
-              <select onChange={(event) => onAddCuisine(event.target.value)} defaultValue="">
-                <option value="" disabled>
-                  Select cuisine
-                </option>
-                {CUISINES.map((cuisine) => (
-                  <option key={cuisine} value={cuisine}>
-                    {cuisine}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Neighborhood
-              <select
-                value={filters.neighborhood}
-                onChange={(event) => onFiltersChange({ ...filters, neighborhood: event.target.value })}
-              >
-                <option value="">All</option>
-                {neighborhoods.map((neighborhood) => (
-                  <option key={neighborhood} value={neighborhood}>
-                    {neighborhood}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Vibe
-              <select value={filters.vibe} onChange={(event) => onFiltersChange({ ...filters, vibe: event.target.value })}>
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.vibe, ['romantic', 'fun and lively', 'quiet']).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Size
-              <select value={filters.size} onChange={(event) => onFiltersChange({ ...filters, size: event.target.value })}>
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.size, ['small', 'medium', 'large']).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Live music
-              <select
-                value={filters.liveMusic}
-                onChange={(event) => onFiltersChange({ ...filters, liveMusic: event.target.value })}
-              >
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.liveMusic, yesNo).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Celebrity chef
-              <select
-                value={filters.celebrityChef}
-                onChange={(event) => onFiltersChange({ ...filters, celebrityChef: event.target.value })}
-              >
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.celebrityChef, yesNo).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Outdoor seating
-              <select
-                value={filters.outdoorSeating}
-                onChange={(event) => onFiltersChange({ ...filters, outdoorSeating: event.target.value })}
-              >
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.outdoorSeating, yesNo).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Group dining
-              <select
-                value={filters.groupDining}
-                onChange={(event) => onFiltersChange({ ...filters, groupDining: event.target.value })}
-              >
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.groupDining, yesNo).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Tasting menu
-              <select
-                value={filters.tastingMenu}
-                onChange={(event) => onFiltersChange({ ...filters, tastingMenu: event.target.value })}
-              >
-                <option value="">Any</option>
-                {selectOptions(advancedFilterOptions.tastingMenu, yesNo).map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              Price max
-              <select
-                value={profile.priceMax}
-                onChange={(event) => onProfileChange({ ...profile, priceMax: Number(event.target.value) })}
-              >
-                <option value={1}>$</option>
-                <option value={2}>$$</option>
-                <option value={3}>$$$</option>
-                <option value={4}>$$$$</option>
-              </select>
-            </label>
-
-            <div className="mini-keyword-list">
-              <p className="small-label">Keywords</p>
-              {(keywordCatalog || []).slice(0, 18).map((item) => {
-                const selected = (profile.selectedKeywords || []).includes(item.keyword);
-                return (
-                  <button
-                    key={item.keyword}
-                    type="button"
-                    className={`keyword-toggle ${selected ? 'selected' : ''}`}
-                    onClick={() => onToggleKeyword(item.keyword)}
-                  >
-                    {item.keyword}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
+        <div className="results-layout single-column-layout">
           <div className="right-results">
             {loading ? <p className="muted">Updating matches...</p> : null}
             {!loading && resultsUpdatedMessage ? <p className="muted">{resultsUpdatedMessage}</p> : null}
@@ -279,6 +106,154 @@ export default function RecommendationsView({
         </div>
       </section>
 
+      {showRefinePanel ? (
+        <div className="modal-overlay" onClick={() => setShowRefinePanel(false)}>
+          <section className="modal-card refine-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Refine Matches</h2>
+              <button type="button" className="link-btn" onClick={() => setShowRefinePanel(false)}>
+                Close
+              </button>
+            </div>
+
+            <div className="profile-summary-card">
+              <p className="small-label">Your initial profile</p>
+              <p className="mini-meta">
+                Price {'$'.repeat(Number(profile.priceMin || 1))} - {'$'.repeat(Number(profile.priceMax || 4))}
+              </p>
+              <div className="summary-chip-wrap">
+                {(profile.cuisinePreferences || []).map((item) => (
+                  <span key={item} className="summary-chip">{item}</span>
+                ))}
+              </div>
+            </div>
+
+            <details open>
+              <summary className="refine-summary">Cuisines</summary>
+              <label>
+                Cuisines
+                <select onChange={(event) => onAddCuisine(event.target.value)} defaultValue="">
+                  <option value="" disabled>
+                    Select cuisine
+                  </option>
+                  {CUISINES.map((cuisine) => (
+                    <option key={cuisine} value={cuisine}>{cuisine}</option>
+                  ))}
+                </select>
+              </label>
+            </details>
+
+            <details>
+              <summary className="refine-summary">Location + Budget</summary>
+              <label>
+                Neighborhood
+                <select value={filters.neighborhood} onChange={(event) => onFiltersChange({ ...filters, neighborhood: event.target.value })}>
+                  <option value="">All</option>
+                  {neighborhoods.map((neighborhood) => (
+                    <option key={neighborhood} value={neighborhood}>{neighborhood}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Price max
+                <select value={profile.priceMax} onChange={(event) => onProfileChange({ ...profile, priceMax: Number(event.target.value) })}>
+                  <option value={1}>$</option>
+                  <option value={2}>$$</option>
+                  <option value={3}>$$$</option>
+                  <option value={4}>$$$$</option>
+                </select>
+              </label>
+            </details>
+
+            <details>
+              <summary className="refine-summary">Vibe + Features</summary>
+              <label>
+                Vibe
+                <select value={filters.vibe} onChange={(event) => onFiltersChange({ ...filters, vibe: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.vibe, ['romantic', 'fun and lively', 'quiet']).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Size
+                <select value={filters.size} onChange={(event) => onFiltersChange({ ...filters, size: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.size, ['small', 'medium', 'large']).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Live music
+                <select value={filters.liveMusic} onChange={(event) => onFiltersChange({ ...filters, liveMusic: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.liveMusic, yesNo).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Celebrity chef
+                <select value={filters.celebrityChef} onChange={(event) => onFiltersChange({ ...filters, celebrityChef: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.celebrityChef, yesNo).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Outdoor seating
+                <select value={filters.outdoorSeating} onChange={(event) => onFiltersChange({ ...filters, outdoorSeating: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.outdoorSeating, yesNo).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Group dining
+                <select value={filters.groupDining} onChange={(event) => onFiltersChange({ ...filters, groupDining: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.groupDining, yesNo).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Tasting menu
+                <select value={filters.tastingMenu} onChange={(event) => onFiltersChange({ ...filters, tastingMenu: event.target.value })}>
+                  <option value="">Any</option>
+                  {selectOptions(advancedFilterOptions.tastingMenu, yesNo).map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </label>
+            </details>
+
+            <details>
+              <summary className="refine-summary">Keywords</summary>
+              <div className="mini-keyword-list">
+                {sortedKeywords.map((item) => {
+                  const selected = (profile.selectedKeywords || []).includes(item.keyword);
+                  return (
+                    <button
+                      key={item.keyword}
+                      type="button"
+                      className={`keyword-toggle ${selected ? 'selected' : ''}`}
+                      onClick={() => onToggleKeyword(item.keyword)}
+                    >
+                      {item.keyword}
+                    </button>
+                  );
+                })}
+              </div>
+            </details>
+          </section>
+        </div>
+      ) : null}
+
       {selectedEntry ? (
         <div className="modal-overlay" onClick={() => setSelectedEntry(null)}>
           <section className="modal-card" onClick={(event) => event.stopPropagation()}>
@@ -315,16 +290,15 @@ export default function RecommendationsView({
             <div className="modal-links">
               {selectedEntry.detail?.websiteUrl ? (
                 <a href={selectedEntry.detail.websiteUrl} target="_blank" rel="noreferrer">Restaurant website</a>
-              ) : (
-                <span className="muted">Restaurant website unavailable.</span>
-              )}
-              {selectedEntry.detail?.booking?.url ? (
-                <a href={selectedEntry.detail.booking.url} target="_blank" rel="noreferrer">
-                  Book on {selectedEntry.detail.booking.platform}
+              ) : null}
+              {(selectedEntry.detail?.bookingLinks || []).map((link) => (
+                <a key={`${link.platform}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+                  {link.platform} link
                 </a>
-              ) : (
-                <span className="muted">Direct reservation link unavailable.</span>
-              )}
+              ))}
+              {!selectedEntry.detail?.websiteUrl && !(selectedEntry.detail?.bookingLinks || []).length ? (
+                <span className="muted">Links unavailable for this restaurant.</span>
+              ) : null}
             </div>
 
             <div className="photo-strip">

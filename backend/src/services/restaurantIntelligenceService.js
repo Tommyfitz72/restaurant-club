@@ -9,7 +9,7 @@ const SOURCE_LIBRARY = [
   { name: 'Hidden Boston', url: 'https://www.hiddenboston.com/BostonRestaurantBlog.html' },
   { name: 'Anna Darrow Substack', url: 'https://annadarrow.substack.com/p/1-another-boston-restaurant-guide' },
   { name: 'One for the Table', url: 'https://oneforthetable.com/restaurant-reviews/boston/' },
-  { name: 'Edible Boston', url: 'https://www.edibleboston.com/blog/2017/12/1/hidden-restaurants-v2-shhhh-ssx9l' },
+  { name: 'Edible Boston', url: 'https://www.edibleboston.com/blog/2017/12/1/hidden-restaurants-v2-shhhh' },
   { name: 'TripAdvisor Boston', url: 'https://www.tripadvisor.com/Restaurants-g60745-Boston_Massachusetts.html' },
   { name: 'OpenTable Boston', url: 'https://www.opentable.com/region/new-england/boston-restaurants' },
   { name: 'Condé Nast Traveler', url: 'https://www.cntraveler.com/gallery/best-restaurants-in-boston' }
