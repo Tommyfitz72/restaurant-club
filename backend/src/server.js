@@ -24,6 +24,8 @@ app.listen(port, host, () => {
   console.log(`Backend API listening on http://${host}:${port}`);
 });
 
+};
+
 start().catch(async (error) => {
   console.error('Failed to start server', error);
   await prisma.$disconnect();
