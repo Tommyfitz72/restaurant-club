@@ -15,6 +15,11 @@ const isAllowedOrigin = (origin) => {
     return true;
   }
 
+  // Allow iOS/Android Capacitor WebView origins.
+  if (origin === 'capacitor://localhost' || origin === 'ionic://localhost' || origin === 'http://localhost') {
+    return true;
+  }
+
   // Allow Vercel deployment URLs to prevent breakage between preview/prod URLs.
   if (origin.endsWith('.vercel.app')) {
     return true;
