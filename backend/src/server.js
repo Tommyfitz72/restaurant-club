@@ -17,10 +17,12 @@ const start = async () => {
     console.log('[intelligence] ingestion scheduler disabled');
   }
 
-  app.listen(env.port, () => {
-    console.log(`Backend API listening on http://localhost:${env.port}`);
-  });
-};
+  const port = Number(process.env.PORT) || 4000;
+const host = '0.0.0.0';
+
+app.listen(port, host, () => {
+  console.log(`Backend API listening on http://${host}:${port}`);
+});
 
 start().catch(async (error) => {
   console.error('Failed to start server', error);
